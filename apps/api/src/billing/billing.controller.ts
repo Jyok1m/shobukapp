@@ -1,0 +1,100 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
+import type { Request } from 'express';
+import type { Plan } from '../generated/prisma/client';
+import { CurrentUser, Public, Roles } from '../auth/decorators';
+import type { SelfUser } from '../common/self-user';
+import { CheckoutDto, CreatePlanDto, UpdatePlanDto } from './dto/plan.dto';
+import { PlansService, PublicPlan } from './plans.service';
+import { MembershipView, SubscriptionsService } from './subscriptions.service';
+import { WebhookService } from './webhook.service';
+
+@Controller('billing')
+export class BillingController {
+  constructor(
+    private readonly plans: PlansService,
+    private readonly subscriptions: SubscriptionsService,
+    private readonly webhook: WebhookService,
+  ) {}
+
+  // Public: the plans page shows before signup.
+  @Public()
+  @Get('plans')
+  listPlans(): Promise<PublicPlan[]> {
+    return this.plans.listPublic();
+  }
+
+  @Get('subscription')
+  membership(@CurrentUser() user: SelfUser): Promise<MembershipView> {
+    return this.subscriptions.membership(user.id);
+  }
+
+  @Post('checkout')
+  @HttpCode(200)
+  checkout(
+    @CurrentUser() user: SelfUser,
+    @Body() dto: CheckoutDto,
+  ): Promise<{ url: string }> {
+    return this.subscriptions.checkout(user, dto.planId);
+  }
+
+  @Post('portal')
+  @HttpCode(200)
+  portal(@CurrentUser() user: SelfUser): Promise<{ url: string }> {
+    return this.subscriptions.portal(user.id);
+  }
+
+  @Public()
+  @SkipThrottle()
+  @Post('webhook')
+  @HttpCode(200)
+  async handleWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers('stripe-signature') signature?: string,
+  ): Promise<{ received: true }> {
+    await this.webhook.handle(req.rawBody, signature);
+    return { received: true };
+  }
+}
+
+@Controller('admin/plans')
+@Roles('ADMIN')
+export class AdminPlansController {
+  constructor(private readonly plans: PlansService) {}
+
+  @Get()
+  list(): Promise<Plan[]> {
+    return this.plans.listAll();
+  }
+
+  @Post()
+  create(@Body() dto: CreatePlanDto): Promise<Plan> {
+    return this.plans.create(dto);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePlanDto,
+  ): Promise<Plan> {
+    return this.plans.update(id, dto);
+  }
+
+  @Delete(':id')
+  archive(@Param('id', ParseUUIDPipe) id: string): Promise<Plan> {
+    return this.plans.archive(id);
+  }
+}

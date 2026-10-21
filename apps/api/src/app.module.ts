@@ -5,6 +5,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import configuration from '../config/configuration';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
 import { AppThrottlerGuard } from './common/throttler.guard';
 import { RolesGuard, SessionGuard } from './auth/guards';
 import { PrismaModule } from './prisma/prisma.module';
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module';
     StorageModule,
     AuthModule,
     UsersModule,
+    BillingModule,
   ],
   controllers: [AppController],
   // Order matters: SessionGuard sets req.user, RolesGuard reads it.
