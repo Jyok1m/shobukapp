@@ -8,5 +8,5 @@ To align with the identity of https://www.shobukan-dojo.com (logo, colours) once
 - Layout: sidebar navigation on desktop, bottom or burger navigation on mobile. Admin screens share the shell with an "Administration" section visible only to admins.
 - Forms: server actions or client fetch to `/api/*`, inline French error messages from the API error code, never a raw API message.
 - Destructive actions (delete document, archive plan) go through `ConfirmDialog`.
-- Statuses in French: "Actif", "En retard de paiement", "Résilié", "Sans abonnement", "Certificat expiré".
+- Statuses in French: "Actif", "En retard de paiement", "Résilié", "Sans cotisation", "Certificat expiré".
 - Accessibility: every input has a label, focus is visible, contrast at least AA.

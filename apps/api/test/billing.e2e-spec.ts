@@ -25,7 +25,8 @@ describe('Billing (e2e)', () => {
   beforeAll(async () => {
     process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET;
     // CI has no Stripe key: signature checks need a client, never the network.
-    process.env.STRIPE_SECRET_KEY ||= 'sk_test_ci_placeholder';
+    process.env.STRIPE_TEST_SECRET_KEY ||= 'sk_test_ci_placeholder';
+    process.env.STRIPE_TEST_WEBHOOK_SECRET = WEBHOOK_SECRET;
     app = await createTestApp();
     prisma = app.get(PrismaService);
   });
@@ -40,8 +41,7 @@ describe('Billing (e2e)', () => {
       .get('/billing/plans')
       .expect(200);
     for (const plan of res.body as Record<string, unknown>[]) {
-      expect(plan).not.toHaveProperty('stripePriceId');
-      expect(plan).not.toHaveProperty('stripeProductId');
+      expect(JSON.stringify(plan)).not.toMatch(/stripe/i);
       expect(plan).toHaveProperty('purchasable');
     }
   });
@@ -112,7 +112,7 @@ describe('Billing (e2e)', () => {
     const customerId = `cus_e2e_${randomUUID()}`;
     await prisma.user.update({
       where: { id: userId },
-      data: { stripeCustomerId: customerId },
+      data: { stripeTestCustomerId: customerId },
     });
     const invoiceId = `in_e2e_${randomUUID()}`;
     const eventId = `evt_e2e_${randomUUID()}`;
@@ -130,6 +130,7 @@ describe('Billing (e2e)', () => {
           currency: 'eur',
           status_transitions: { paid_at: 1_760_000_000 },
           parent: null,
+          livemode: false,
         },
       },
     });

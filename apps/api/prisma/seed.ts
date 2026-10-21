@@ -61,7 +61,7 @@ const PLANS = [
 ];
 
 async function main() {
-  const prisma = scriptPrisma();
+  const prisma = scriptPrisma('local');
   try {
     const passwordHash = await hash(DEMO_PASSWORD);
     const users: User[] = [];

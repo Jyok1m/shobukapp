@@ -1,14 +1,17 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import type Stripe from 'stripe';
 import type { Plan } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlanDto, UpdatePlanDto } from './dto/plan.dto';
-import { StripeService } from './stripe.service';
+import { MODE_FIELDS, StripeMode, StripeService } from './stripe.service';
 
 export type PublicPlan = Pick<
   Plan,
   'id' | 'name' | 'description' | 'amountCents' | 'currency' | 'interval'
 > & { purchasable: boolean };
+
+export type AdminPlan = Plan & { synced: boolean };
 
 /*
  * DTO instances carry every declared field, undefined when absent
@@ -22,8 +25,21 @@ function definedOnly<T extends object>(dto: T): Partial<T> {
 
 const STRIPE_INTERVAL = { MONTH: 'month', YEAR: 'year' } as const;
 
-// Stripe is written before the database: an orphan product is harmless, a row
-// pointing to a missing price breaks a payment (docs/billing.md).
+type PlanShape = Pick<
+  Plan,
+  'name' | 'description' | 'amountCents' | 'currency' | 'interval' | 'active'
+>;
+
+function ids(plan: Plan, mode: StripeMode) {
+  const fields = MODE_FIELDS[mode];
+  return { productId: plan[fields.product], priceId: plan[fields.price] };
+}
+
+/*
+ * Stripe is written before the database: an orphan product is harmless, a row
+ * pointing to a missing price breaks a payment (docs/billing.md). Edits reach
+ * the current mode only; switching modes brings the other one up to date.
+ */
 @Injectable()
 export class PlansService {
   private readonly logger = new Logger(PlansService.name);
@@ -34,6 +50,7 @@ export class PlansService {
   ) {}
 
   async listPublic(): Promise<PublicPlan[]> {
+    const { mode, client } = await this.stripe.current();
     const plans = await this.prisma.plan.findMany({
       where: { active: true },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
@@ -45,40 +62,45 @@ export class PlansService {
       amountCents: plan.amountCents,
       currency: plan.currency,
       interval: plan.interval,
-      purchasable: this.stripe.enabled && Boolean(plan.stripePriceId),
+      purchasable: Boolean(client && ids(plan, mode).priceId),
     }));
   }
 
-  listAll(): Promise<Plan[]> {
-    return this.prisma.plan.findMany({
+  async listAll(): Promise<AdminPlan[]> {
+    const mode = await this.stripe.mode();
+    const plans = await this.prisma.plan.findMany({
       orderBy: [{ active: 'desc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
+    return plans.map((plan) => ({
+      ...plan,
+      synced: Boolean(ids(plan, mode).priceId),
+    }));
   }
 
   async create(dto: CreatePlanDto): Promise<Plan> {
+    const { mode, client } = await this.stripe.current();
     const id = randomUUID();
-    const stripeIds = this.stripe.enabled
-      ? await this.createStripeProduct(id, dto)
+    const shape: PlanShape = {
+      name: dto.name,
+      description: dto.description ?? null,
+      amountCents: dto.amountCents,
+      interval: dto.interval,
+      currency: 'eur',
+      active: true,
+    };
+    const stripeIds = client
+      ? await this.createProduct(client, mode, id, shape)
       : {};
-    return this.prisma.plan.create({
-      data: { id, ...dto, ...stripeIds },
-    });
+    return this.prisma.plan.create({ data: { id, ...dto, ...stripeIds } });
   }
 
   async update(id: string, input: UpdatePlanDto): Promise<Plan> {
     const plan = await this.find(id);
     const dto = definedOnly(input);
-    const next = { ...plan, ...dto };
-    let stripeIds: { stripeProductId?: string; stripePriceId?: string } = {};
-
-    if (this.stripe.enabled) {
-      if (!plan.stripeProductId) {
-        stripeIds = await this.createStripeProduct(plan.id, next);
-      } else {
-        stripeIds = await this.syncStripeProduct(plan, next);
-      }
-    }
-
+    const { mode, client } = await this.stripe.current();
+    const stripeIds = client
+      ? await this.syncMode(client, mode, plan, { ...plan, ...dto })
+      : {};
     return this.prisma.plan.update({
       where: { id },
       data: { ...dto, ...stripeIds },
@@ -96,78 +118,109 @@ export class PlansService {
     return plan;
   }
 
-  private async createStripeProduct(
-    planId: string,
-    plan: Pick<Plan, 'name' | 'amountCents' | 'interval'> &
-      Partial<Pick<Plan, 'description' | 'currency' | 'active'>>,
-  ): Promise<{ stripeProductId: string; stripePriceId: string }> {
-    const stripe = this.stripe.require();
-    const product = await stripe.products.create(
-      {
-        name: plan.name,
-        ...(plan.description && { description: plan.description }),
-        active: plan.active ?? true,
-        metadata: { planId },
-      },
-      { idempotencyKey: `plan-product-${planId}` },
-    );
-    const price = await this.createPrice(product.id, planId, plan);
-    return { stripeProductId: product.id, stripePriceId: price };
+  /*
+   * Before a mode switch: every plan gets this mode's product and price as the
+   * row describes it now. Edits made in the other mode meanwhile (an amount, a
+   * name, an archive) are caught up here, so the switch leaves no stale price.
+   */
+  async syncAllForMode(mode: StripeMode): Promise<void> {
+    const client = this.stripe.require(mode);
+    const plans = await this.prisma.plan.findMany();
+    for (const plan of plans) {
+      const stripeIds = await this.syncMode(client, mode, plan, plan, true);
+      if (Object.keys(stripeIds).length) {
+        await this.prisma.plan.update({
+          where: { id: plan.id },
+          data: stripeIds,
+        });
+      }
+    }
   }
 
-  private async syncStripeProduct(
+  private async syncMode(
+    client: Stripe,
+    mode: StripeMode,
     current: Plan,
-    next: Plan,
-  ): Promise<{ stripePriceId?: string }> {
-    const stripe = this.stripe.require();
-    const productId = current.stripeProductId!;
-
-    if (
-      current.name !== next.name ||
-      current.description !== next.description ||
-      current.active !== next.active
-    ) {
-      await stripe.products.update(productId, {
-        name: next.name,
-        description: next.description ?? '',
-        active: next.active,
-      });
+    next: PlanShape,
+    compareRemote = false,
+  ): Promise<Record<string, string>> {
+    const { productId, priceId } = ids(current, mode);
+    if (!productId) {
+      // An archived plan never sold in this mode has nothing to create there.
+      if (!next.active) return {};
+      return this.createProduct(client, mode, current.id, next);
     }
+
+    await client.products.update(productId, {
+      name: next.name,
+      description: next.description ?? '',
+      active: next.active,
+    });
 
     // A Stripe price is immutable: a new amount or interval means a new price.
-    const priceChanged =
+    let stale =
+      !priceId ||
       current.amountCents !== next.amountCents ||
-      current.interval !== next.interval ||
-      !current.stripePriceId;
-    if (priceChanged) {
-      const priceId = await this.createPrice(productId, current.id, next);
-      if (current.stripePriceId && current.stripePriceId !== priceId) {
-        await stripe.prices.update(current.stripePriceId, { active: false });
-      }
-      return { stripePriceId: priceId };
+      current.interval !== next.interval;
+    if (!stale && compareRemote && priceId) {
+      const price = await client.prices.retrieve(priceId);
+      stale =
+        price.unit_amount !== next.amountCents ||
+        price.recurring?.interval !== STRIPE_INTERVAL[next.interval];
     }
-
-    if (current.stripePriceId && current.active !== next.active) {
-      await stripe.prices.update(current.stripePriceId, {
-        active: next.active,
-      });
+    if (stale) {
+      const newPriceId = await this.createPrice(
+        client,
+        productId,
+        current.id,
+        next,
+      );
+      if (priceId && priceId !== newPriceId) {
+        await client.prices.update(priceId, { active: false });
+      }
+      return { [MODE_FIELDS[mode].price]: newPriceId };
+    }
+    if (priceId) {
+      await client.prices.update(priceId, { active: next.active });
     }
     return {};
   }
 
+  private async createProduct(
+    client: Stripe,
+    mode: StripeMode,
+    planId: string,
+    plan: PlanShape,
+  ): Promise<Record<string, string>> {
+    const product = await client.products.create(
+      {
+        name: plan.name,
+        ...(plan.description && { description: plan.description }),
+        active: plan.active,
+        metadata: { planId },
+      },
+      { idempotencyKey: `plan-product-${mode}-${planId}` },
+    );
+    const priceId = await this.createPrice(client, product.id, planId, plan);
+    return {
+      [MODE_FIELDS[mode].product]: product.id,
+      [MODE_FIELDS[mode].price]: priceId,
+    };
+  }
+
   private async createPrice(
+    client: Stripe,
     productId: string,
     planId: string,
-    plan: Pick<Plan, 'amountCents' | 'interval'> &
-      Partial<Pick<Plan, 'currency' | 'active'>>,
+    plan: PlanShape,
   ): Promise<string> {
-    const price = await this.stripe.require().prices.create(
+    const price = await client.prices.create(
       {
         product: productId,
         unit_amount: plan.amountCents,
-        currency: plan.currency ?? 'eur',
+        currency: plan.currency,
         recurring: { interval: STRIPE_INTERVAL[plan.interval] },
-        active: plan.active ?? true,
+        active: plan.active,
         metadata: { planId },
       },
       // Random per call: a key derived from the amount would hand back an old,

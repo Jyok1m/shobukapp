@@ -23,6 +23,8 @@ export const selfUserSelect = {
   emergencyContactName: true,
   emergencyContactPhone: true,
   directoryVisible: true,
+  mustChangePassword: true,
+  termsAcceptedAt: true,
   createdAt: true,
 } satisfies Prisma.UserSelect;
 

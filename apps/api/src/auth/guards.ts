@@ -9,7 +9,7 @@ import { Reflector } from '@nestjs/core';
 import type { Response } from 'express';
 import type { Role } from '../generated/prisma/client';
 import type { AuthenticatedRequest } from '../common/request';
-import { IS_PUBLIC, ROLES } from './decorators';
+import { ALLOW_PENDING_PASSWORD, IS_PUBLIC, ROLES } from './decorators';
 import { SESSION_COOKIE, SessionService } from './session.service';
 
 // Registered globally before RolesGuard: the latter reads what this one sets.
@@ -47,6 +47,18 @@ export class SessionGuard implements CanActivate {
     }
     req.user = resolved.user;
     req.sessionToken = token;
+
+    // An admin knows the temporary password: nothing else is reachable until
+    // the member replaces it.
+    if (resolved.user.mustChangePassword) {
+      const allowed = this.reflector.getAllAndOverride<boolean>(
+        ALLOW_PENDING_PASSWORD,
+        [ctx.getHandler(), ctx.getClass()],
+      );
+      if (!allowed) {
+        throw new ForbiddenException({ code: 'password_change_required' });
+      }
+    }
     return true;
   }
 }

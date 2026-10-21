@@ -8,8 +8,10 @@ const plan = {
   amountCents: 25000,
   currency: 'eur',
   interval: 'YEAR' as const,
-  stripeProductId: 'prod_1',
-  stripePriceId: 'price_old',
+  stripeTestProductId: 'prod_1',
+  stripeTestPriceId: 'price_old',
+  stripeLiveProductId: null,
+  stripeLivePriceId: null,
   active: true,
   sortOrder: 0,
   createdAt: new Date(),
@@ -35,7 +37,10 @@ function setup() {
   };
   const service = new PlansService(
     prisma as never,
-    { enabled: true, require: () => stripe } as never,
+    {
+      current: () => Promise.resolve({ mode: 'test', client: stripe }),
+      require: () => stripe,
+    } as never,
   );
   return { service, stripe, prisma };
 }
@@ -52,6 +57,63 @@ function dto(values: Partial<UpdatePlanDto>): UpdatePlanDto {
     ...values,
   });
 }
+
+describe('PlansService.syncAllForMode', () => {
+  it('creates missing live objects, skips archived plans, and replaces a drifted price', async () => {
+    const live = {
+      products: {
+        create: jest.fn().mockResolvedValue({ id: 'prod_live' }),
+        update: jest.fn(),
+      },
+      prices: {
+        create: jest.fn().mockResolvedValue({ id: 'price_live_new' }),
+        update: jest.fn(),
+        retrieve: jest.fn().mockResolvedValue({
+          unit_amount: 20000,
+          recurring: { interval: 'year' },
+        }),
+      },
+    };
+    const neverSold = { ...plan, id: 'p1' };
+    const archived = { ...plan, id: 'p2', active: false };
+    const drifted = {
+      ...plan,
+      id: 'p3',
+      stripeLiveProductId: 'prod_x',
+      stripeLivePriceId: 'price_x',
+    };
+    const prisma = {
+      plan: {
+        findMany: jest.fn().mockResolvedValue([neverSold, archived, drifted]),
+        update: jest.fn(),
+      },
+    };
+    const service = new PlansService(
+      prisma as never,
+      { require: () => live } as never,
+    );
+    await service.syncAllForMode('live');
+
+    expect(live.products.create).toHaveBeenCalledTimes(1);
+    expect(prisma.plan.update).toHaveBeenCalledWith({
+      where: { id: 'p1' },
+      data: {
+        stripeLiveProductId: 'prod_live',
+        stripeLivePriceId: 'price_live_new',
+      },
+    });
+    expect(prisma.plan.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'p2' } }),
+    );
+    expect(live.prices.update).toHaveBeenCalledWith('price_x', {
+      active: false,
+    });
+    expect(prisma.plan.update).toHaveBeenCalledWith({
+      where: { id: 'p3' },
+      data: { stripeLivePriceId: 'price_live_new' },
+    });
+  });
+});
 
 describe('PlansService.update', () => {
   it('creates a recurring price with the current interval and deactivates the old one', async () => {
@@ -71,9 +133,13 @@ describe('PlansService.update', () => {
     });
     expect(prisma.plan.update).toHaveBeenCalledWith({
       where: { id: plan.id },
-      data: { amountCents: 30000, stripePriceId: 'price_new' },
+      data: { amountCents: 30000, stripeTestPriceId: 'price_new' },
     });
-    expect(stripe.products.update).not.toHaveBeenCalled();
+    // The product is re-sent as the row describes it, unchanged here.
+    expect(stripe.products.update).toHaveBeenCalledWith(
+      'prod_1',
+      expect.objectContaining({ name: 'Annuel', active: true }),
+    );
   });
 
   it('renames the product without touching the price', async () => {

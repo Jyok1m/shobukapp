@@ -11,15 +11,20 @@ PostgreSQL through Prisma. Schema in `apps/api/prisma/schema.prisma`, migrations
 - Never edit an applied migration. A wrong migration is fixed by a new one.
 - Deleting a user is a privacy operation, not a cascade by accident: see `privacy.md`.
 
-## Local database until the real URL arrives
+## Local development
+
+Two databases, on purpose:
+
+- `DATABASE_URL` (apps/api/.env): the **dev database on the server**, through `make tunnel` (localhost:15433). The local API and the admin scripts use it, so local work shows the same data as https://shobukapp-dev.joachimjasmin.com.
+- `LOCAL_DATABASE_URL`: a **local Docker Postgres** for everything that writes structure or fixtures: `prisma migrate dev` (it may offer to reset what it targets), `db:seed`, and the e2e suites (they create and delete users). `prisma.config.ts`, the seed and `test/setup-env.ts` prefer it; the e2e setup refuses to run against ports 15433 or 5433.
 
 ```bash
 docker run -d --name shobukapp-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=shobukapp -p 5432:5432 postgres:17
-# apps/api/.env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/shobukapp?schema=public"
+make tunnel            # in its own terminal
+make db-dev-migrate    # after writing a migration: the local API runs new code against the dev schema
 ```
 
-Switching to the real database later only changes `DATABASE_URL`, then `pnpm --filter @shobukapp/api db:deploy`.
+A migration is written against the local database, committed, and reaches dev and production through the pipeline. `make db-dev-migrate` only brings the dev schema forward ahead of the next dev deploy.
 
 ## Prisma 7 pitfalls
 

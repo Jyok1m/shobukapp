@@ -41,7 +41,7 @@ app/
   (app)/               layout.tsx checks the session, redirects to /connexion
     tableau-de-bord/   member home: membership status, next steps
     profil/
-    abonnement/
+    cotisation/         (/abonnement redirects here)
     annuaire/
     messagerie/
     documents/

@@ -13,6 +13,10 @@ The dojo is the data controller. This app processes identity, contact, licence i
 
 - **Join requests** (`onboarding.md`) are data of people who are not members: name, email, optional phone, a free message. Only admins read them; an admin can delete one at any time. The form states that the data only serves to answer the request.
 
+- **Admin-created accounts**: the admin chooses a temporary password and therefore knows it until the member replaces it at first login (forced). An admin could log in first and accept the terms on the member's behalf: a limit of the design, accepted by the dojo.
+- **Role changes** are journaled (`role_changes`: who, whom, when) for accountability.
+- **Production to dev copies** (`deployment.md`) are anonymized before the dev API can read them: names, emails (except admins'), phones, addresses, emergency contacts, birth data, messages, join requests, reminder notes, document titles and licence numbers are replaced or cleared; production password hashes and sessions never reach dev; admins' documents are dropped. Files are not copied.
+
 ## Rights
 
 - Access and portability: the member can download their own data (profile, documents, licences, messages) as a zip. Not in the MVP; the admin export covers urgent requests.

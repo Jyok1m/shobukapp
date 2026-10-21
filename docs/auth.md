@@ -4,6 +4,7 @@ Email and password handled by the API, server-side sessions in Postgres. No JWT:
 
 ## Flow
 
+- `POST /auth/password`: also the way out of an admin-set temporary password (`must_change_password`), with terms acceptance if the account never gave it.
 - `POST /auth/register`: invitation only, by link token or by email and code (`onboarding.md`). Creates a `PRACTITIONER`, opens a session.
 - `POST /auth/login`: same generic error for unknown email and wrong password (`invalid_credentials`), so the form does not reveal who has an account.
 - `POST /auth/logout`: deletes the session row and clears the cookie.
@@ -39,7 +40,7 @@ Every browser request reaches the API through the Next rewrite, so the socket pe
 
 ## Admin right
 
-`pnpm --filter @shobukapp/api admin:grant <email>` sets `role = ADMIN`. No HTTP route changes a role. Requires server access, which is the point.
+`pnpm --filter @shobukapp/api admin:grant <email>` sets `role = ADMIN` from the server, for the first admin. After that, admins change roles from the dashboard under the guardrails of `members.md` (Roles): password re-entry, not on oneself, never the last admin, journal and mail. This replaced the original "no route changes a role" rule at the dojo's request; the remaining risk (stolen session plus password) is accepted and made visible, not removed.
 
 ## Web side
 

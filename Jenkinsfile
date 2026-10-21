@@ -70,7 +70,7 @@ pipeline {
                                     export PATH="$HOME/bin:$PATH"
                                     pnpm typecheck
                                     pnpm --filter @shobukapp/web lint
-                                    pnpm --filter @shobukapp/api exec eslint "src/**/*.ts" "test/**/*.ts"
+                                    pnpm --filter @shobukapp/api exec eslint "src/**/*.ts" "test/**/*.ts" "config/**/*.ts"
                                 '
                         '''
                     }

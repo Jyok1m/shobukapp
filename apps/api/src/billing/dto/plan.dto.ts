@@ -2,6 +2,7 @@ import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -85,4 +86,14 @@ export class UpdatePlanDto {
 export class CheckoutDto {
   @IsUUID()
   planId!: string;
+}
+
+export class StripeModeDto {
+  @IsIn(['test', 'live'])
+  mode!: 'test' | 'live';
+
+  // The acting admin's own password: going live takes real money.
+  @IsString()
+  @MaxLength(128)
+  password!: string;
 }

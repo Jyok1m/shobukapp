@@ -19,7 +19,7 @@ Open question: if the dojo needs a third role (for example a board member who se
 ## Practitioner features
 
 - Ask to join with a message and an optional trial class ("Nous rejoindre"), then sign up from the link the dojo sends. Existing practitioners activate their account with a code from the dojo ("Activation"). Sign in, sign out ("Connexion").
-- See the dojo plans and buy one through Stripe Checkout, then manage it (card, invoices, cancellation) through the Stripe Customer Portal ("Mon abonnement").
+- See the dojo plans and buy one through Stripe Checkout, then manage it (card, invoices, cancellation) through the Stripe Customer Portal ("Ma cotisation"; the UI says cotisation, never abonnement).
 - See the directory of members who opted in: name, photo, phone, email ("Annuaire").
 - Send and receive 1:1 messages with other members ("Messagerie").
 - Upload, replace, rename and delete their own documents, first of all the medical certificate ("Mes documents").

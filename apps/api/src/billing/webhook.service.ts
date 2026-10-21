@@ -7,7 +7,7 @@ import {
 import type Stripe from 'stripe';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { StripeService } from './stripe.service';
+import { STRIPE_MODES, StripeMode, StripeService } from './stripe.service';
 import { SubscriptionsService } from './subscriptions.service';
 
 /*
@@ -25,23 +25,40 @@ export class WebhookService {
     private readonly subscriptions: SubscriptionsService,
   ) {}
 
+  /*
+   * One URL for both modes: Stripe signs test and live events with each
+   * endpoint's own secret. The event says which mode it belongs to, and that
+   * mode's client re-reads the objects.
+   */
   async handle(rawBody: Buffer | undefined, signature: string | undefined) {
-    const stripe = this.stripe.require();
-    if (!this.stripe.webhookSecret) {
+    const secrets = STRIPE_MODES.map((mode) => ({
+      mode,
+      secret: this.stripe.webhookSecret(mode),
+      client: this.stripe.client(mode),
+    })).filter((s) => s.secret && s.client);
+    if (!secrets.length) {
       throw new ServiceUnavailableException({ code: 'webhook_disabled' });
     }
     if (!rawBody || !signature) {
       throw new BadRequestException({ code: 'invalid_signature' });
     }
 
-    let event: Stripe.Event;
-    try {
-      event = stripe.webhooks.constructEvent(
-        rawBody,
-        signature,
-        this.stripe.webhookSecret,
-      );
-    } catch {
+    let event: Stripe.Event | null = null;
+    let verifiedBy: StripeMode | null = null;
+    for (const { mode, secret, client } of secrets) {
+      try {
+        event = client!.webhooks.constructEvent(rawBody, signature, secret!);
+        verifiedBy = mode;
+        break;
+      } catch {
+        // Try the other mode's secret.
+      }
+    }
+    if (!event) throw new BadRequestException({ code: 'invalid_signature' });
+    const mode: StripeMode = event.livemode ? 'live' : 'test';
+    // A live event signed with the test endpoint's secret is not one Stripe
+    // sent us: refused rather than processed with the live client.
+    if (mode !== verifiedBy) {
       throw new BadRequestException({ code: 'invalid_signature' });
     }
 
@@ -50,7 +67,7 @@ export class WebhookService {
     });
     if (seen) return;
 
-    await this.dispatch(event);
+    await this.dispatch(event, mode);
 
     try {
       await this.prisma.stripeEvent.create({
@@ -66,13 +83,14 @@ export class WebhookService {
     }
   }
 
-  private async dispatch(event: Stripe.Event): Promise<void> {
+  private async dispatch(event: Stripe.Event, mode: StripeMode): Promise<void> {
     switch (event.type) {
       case 'checkout.session.completed': {
         const subscription = event.data.object.subscription;
         if (subscription) {
           await this.subscriptions.syncFromStripe(
             typeof subscription === 'string' ? subscription : subscription.id,
+            mode,
           );
         }
         return;
@@ -80,7 +98,7 @@ export class WebhookService {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted':
-        await this.subscriptions.syncFromStripe(event.data.object.id);
+        await this.subscriptions.syncFromStripe(event.data.object.id, mode);
         return;
       case 'invoice.paid':
         await this.subscriptions.recordInvoice(event.data.object, 'PAID');

@@ -7,7 +7,7 @@ One OVH server, managed in `iac-journey` (Ansible role `shobukapp`), same patter
 | Site | https://shobukapp.joachimjasmin.com | https://shobukapp-dev.joachimjasmin.com (basic auth) |
 | Images | `jyok1m/shobukapp-{api,web,migrate}:main` | `:dev` |
 | Postgres | `shobukapp-db`, loopback `5433` | `shobukapp-db-dev`, loopback `15433` |
-| `APP_ENV` | `production` (live Stripe key only) | `staging` (test Stripe key only) |
+| `APP_ENV` | `production` (test and live Stripe pairs, switched in the dashboard) | `staging` (test pair only) |
 | Backups | daily `pg_dump` to OVH S3 (`shobukapp` bucket) | none |
 
 ## Pipeline
@@ -37,7 +37,7 @@ GitHub Actions (`.github/workflows/trigger_jenkins.yml`) triggers the Jenkins jo
 
 ## Manual steps
 
-1. Fill the Stripe keys in `iac-journey/ansible/vaults/shobukapp.yml` (`ansible-vault edit`), and declare the two webhook endpoints in Stripe (events: `checkout.session.completed`, `customer.subscription.created|updated|deleted`, `invoice.paid`, `invoice.payment_failed`).
+1. Fill the Stripe keys in `iac-journey/ansible/vaults/shobukapp.yml` (`ansible-vault edit`): production reads `shobukapp_vault_stripe_test_secret_key`, `_test_webhook_secret`, `_live_secret_key`, `_live_webhook_secret`; dev reads `shobukapp_vault_stripe_dev_secret_key` and `_dev_webhook_secret`. Declare the webhook endpoints in Stripe: production URL once in test mode and once in live mode, dev URL in test mode (events: `checkout.session.completed`, `customer.subscription.created|updated|deleted`, `invoice.paid`, `invoice.payment_failed`).
 2. Add `traefik_vault_shobukapp_dev_basic_auth` (an htpasswd line) to `vaults/traefik.yml`, run `--tags traefik`.
 3. Create the OVH bucket `shobukapp` for backups.
 4. Create the Jenkins multibranch job `apps/shobukapp` like OdyssAI's, and the GitHub secrets `JENKINS_USER` and `JENKINS_API_TOKEN` on the repository.
@@ -53,3 +53,15 @@ DATABASE_URL="postgresql://shobukapp:<password>@localhost:5433/shobukapp?schema=
 # prints an activation code: create the account on /activation, then
 DATABASE_URL=... pnpm --filter @shobukapp/api admin:grant <email>
 ```
+
+## Production to dev
+
+`make db-prod-to-dev` (reads `.env.local`) replaces the dev database with an **anonymized** copy of production:
+
+1. restores a `pg_dump` of production into a side database `shobukapp_import` on the dev server, server to server (rows never transit the workstation);
+2. brings that copy to dev's schema with dev's migrate image (production may be behind, and the anonymization targets dev's schema);
+3. runs `scripts/db/anonymize.sql` on it, in one transaction: non-admins become `Membre n` / `membre-n@anonyme.invalid`, admins `Admin n` with their email kept; every personal field is cleared; **every account gets the password `shobukan-demo`** (production hashes never reach dev); join requests, messages, reminder notes, document titles and licence numbers are blanked, admins' documents dropped; sessions and pending invitations deleted (they would work on dev); Stripe ids cleared and the mode forced to test;
+4. stops `api-dev`, refuses new connections (a tunnelled Prisma pool would reconnect and block the rename), swaps the databases by rename;
+5. starts `api-dev` and waits for it to be healthy, then drops the previous dev database.
+
+On any failure a trap drops the side database (real data until step 3), renames the previous dev database back if the swap was interrupted, and restarts `api-dev`. Real data never sits in the database the dev API serves. Files (photos, certificates, licences) are not copied: downloads answer 404 on dev.

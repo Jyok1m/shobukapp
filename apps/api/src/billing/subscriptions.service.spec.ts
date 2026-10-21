@@ -27,8 +27,8 @@ function setup(subscription: object) {
     subscriptions: { retrieve: jest.fn().mockResolvedValue(subscription) },
   };
   const prisma = {
-    user: { findUnique: jest.fn().mockResolvedValue({ id: 'user-1' }) },
-    plan: { findUnique: jest.fn() },
+    user: { findFirst: jest.fn().mockResolvedValue({ id: 'user-1' }) },
+    plan: { findFirst: jest.fn() },
     subscription: { upsert: jest.fn() },
     payment: { upsert: jest.fn() },
   };
@@ -44,6 +44,7 @@ const stripeSubscription = (product: string) => ({
   id: 'sub_1',
   customer: 'cus_1',
   status: 'active',
+  livemode: false,
   cancel_at_period_end: false,
   metadata: {},
   items: {
@@ -59,11 +60,11 @@ const stripeSubscription = (product: string) => ({
 describe('SubscriptionsService.syncFromStripe', () => {
   it('matches the plan by product, so a subscriber on an old price keeps their plan', async () => {
     const { service, prisma } = setup(stripeSubscription('prod_1'));
-    prisma.plan.findUnique.mockResolvedValue({ id: 'plan-1' });
-    await service.syncFromStripe('sub_1');
+    prisma.plan.findFirst.mockResolvedValue({ id: 'plan-1' });
+    await service.syncFromStripe('sub_1', 'test');
 
-    expect(prisma.plan.findUnique).toHaveBeenCalledWith({
-      where: { stripeProductId: 'prod_1' },
+    expect(prisma.plan.findFirst).toHaveBeenCalledWith({
+      where: { stripeTestProductId: 'prod_1' },
       select: { id: true },
     });
     expect(prisma.subscription.upsert).toHaveBeenCalledWith(
@@ -79,8 +80,8 @@ describe('SubscriptionsService.syncFromStripe', () => {
 
   it('stores an unknown product without a plan instead of guessing', async () => {
     const { service, prisma } = setup(stripeSubscription('prod_unknown'));
-    prisma.plan.findUnique.mockResolvedValue(null);
-    await service.syncFromStripe('sub_1');
+    prisma.plan.findFirst.mockResolvedValue(null);
+    await service.syncFromStripe('sub_1', 'test');
     expect(prisma.subscription.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({ planId: null }) as unknown,
@@ -101,6 +102,7 @@ describe('SubscriptionsService.recordInvoice', () => {
         currency: 'eur',
         status_transitions: { paid_at: null },
         parent: null,
+        livemode: false,
       } as never,
       'FAILED',
     );

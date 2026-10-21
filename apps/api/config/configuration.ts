@@ -15,24 +15,54 @@ function appEnv(): AppEnv {
   return value as AppEnv;
 }
 
-// Stripe rules: docs/billing.md, section Environments.
-function stripe(env: AppEnv) {
-  const secretKey = process.env.STRIPE_SECRET_KEY || null;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || null;
-  if (secretKey) {
-    if (env !== 'production' && secretKey.startsWith('sk_live_')) {
-      throw new Error(
-        'A live Stripe key is refused outside APP_ENV=production',
-      );
-    }
-    if (env === 'production' && secretKey.startsWith('sk_test_')) {
-      throw new Error('A test Stripe key is refused in APP_ENV=production');
-    }
-    if (env === 'production' && !webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET is required with a Stripe key');
+export type StripeKeys = {
+  secretKey: string | null;
+  webhookSecret: string | null;
+};
+
+/*
+ * Stripe rules: docs/billing.md, section Modes. Both key pairs can be set; the
+ * admin switch picks which one serves. A live key is refused outside
+ * production. The legacy STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET pair still
+ * works and lands in the slot its prefix names.
+ */
+function stripe(env: AppEnv): { test: StripeKeys; live: StripeKeys } {
+  const slots = {
+    test: {
+      secretKey: process.env.STRIPE_TEST_SECRET_KEY || null,
+      webhookSecret: process.env.STRIPE_TEST_WEBHOOK_SECRET || null,
+    },
+    live: {
+      secretKey: process.env.STRIPE_LIVE_SECRET_KEY || null,
+      webhookSecret: process.env.STRIPE_LIVE_WEBHOOK_SECRET || null,
+    },
+  };
+  const legacy = process.env.STRIPE_SECRET_KEY || null;
+  if (legacy) {
+    const slot = legacy.startsWith('sk_live_') ? slots.live : slots.test;
+    slot.secretKey ??= legacy;
+    slot.webhookSecret ??= process.env.STRIPE_WEBHOOK_SECRET || null;
+  }
+
+  if (slots.test.secretKey?.startsWith('sk_live_')) {
+    throw new Error('STRIPE_TEST_SECRET_KEY holds a live key');
+  }
+  if (slots.live.secretKey && !slots.live.secretKey.startsWith('sk_live_')) {
+    throw new Error('STRIPE_LIVE_SECRET_KEY must be a live key (sk_live_)');
+  }
+  if (slots.live.secretKey && env !== 'production') {
+    throw new Error('A live Stripe key is refused outside APP_ENV=production');
+  }
+  if (env === 'production') {
+    for (const [mode, keys] of Object.entries(slots)) {
+      if (keys.secretKey && !keys.webhookSecret) {
+        throw new Error(
+          `The ${mode} webhook secret is required with the ${mode} Stripe key`,
+        );
+      }
     }
   }
-  return { enabled: Boolean(secretKey), secretKey, webhookSecret };
+  return slots;
 }
 
 // Discrete variables rather than a URL: a mailbox password with URL-reserved

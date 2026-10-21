@@ -7,7 +7,7 @@ function setup(cancel: jest.Mock) {
     user: {
       findUnique: jest.fn().mockResolvedValue({
         photoKey: 'photo-key',
-        subscriptions: [{ stripeSubscriptionId: 'sub_1' }],
+        subscriptions: [{ stripeSubscriptionId: 'sub_1', livemode: false }],
         documents: [{ storageKey: 'doc-key' }],
         licenses: [{ storageKey: null }],
       }),
@@ -26,7 +26,7 @@ function setup(cancel: jest.Mock) {
   const service = new ErasureService(
     prisma as never,
     storage as never,
-    { require: () => ({ subscriptions: { cancel } }) } as never,
+    { client: () => ({ subscriptions: { cancel } }) } as never,
   );
   return { service, calls, prisma, storage };
 }

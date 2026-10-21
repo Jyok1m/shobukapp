@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
@@ -9,16 +10,25 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Req,
 } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
-import { SkipThrottle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import type { Plan } from '../generated/prisma/client';
 import { CurrentUser, Public, Roles } from '../auth/decorators';
 import type { SelfUser } from '../common/self-user';
-import { CheckoutDto, CreatePlanDto, UpdatePlanDto } from './dto/plan.dto';
-import { PlansService, PublicPlan } from './plans.service';
+import {
+  CheckoutDto,
+  CreatePlanDto,
+  StripeModeDto,
+  UpdatePlanDto,
+} from './dto/plan.dto';
+import { StripeService } from './stripe.service';
+import { AuthService } from '../auth/auth.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { AdminPlan, PlansService, PublicPlan } from './plans.service';
 import { MembershipView, SubscriptionsService } from './subscriptions.service';
 import { WebhookService } from './webhook.service';
 
@@ -76,7 +86,7 @@ export class AdminPlansController {
   constructor(private readonly plans: PlansService) {}
 
   @Get()
-  list(): Promise<Plan[]> {
+  list(): Promise<AdminPlan[]> {
     return this.plans.listAll();
   }
 
@@ -96,5 +106,53 @@ export class AdminPlansController {
   @Delete(':id')
   archive(@Param('id', ParseUUIDPipe) id: string): Promise<Plan> {
     return this.plans.archive(id);
+  }
+}
+
+@Controller('admin/settings/billing')
+@Roles('ADMIN')
+export class AdminBillingSettingsController {
+  constructor(
+    private readonly stripe: StripeService,
+    private readonly plans: PlansService,
+    private readonly auth: AuthService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  @Get()
+  async get() {
+    const settings = await this.prisma.appSettings.findUniqueOrThrow({
+      where: { id: 1 },
+      select: {
+        stripeLive: true,
+        updatedAt: true,
+        updatedBy: { select: { firstName: true, lastName: true } },
+      },
+    });
+    return {
+      mode: settings.stripeLive ? 'live' : 'test',
+      configured: {
+        test: this.stripe.configured('test'),
+        live: this.stripe.configured('live'),
+      },
+      updatedAt: settings.updatedAt,
+      updatedBy: settings.updatedBy,
+    };
+  }
+
+  /*
+   * Plans are brought up to date in the target mode before the switch: if
+   * Stripe refuses, the mode does not change and nothing is half sold.
+   */
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Put()
+  async set(@CurrentUser() admin: SelfUser, @Body() dto: StripeModeDto) {
+    await this.auth.confirmPassword(admin.id, dto.password);
+    if (!this.stripe.configured(dto.mode)) {
+      throw new ConflictException({ code: 'stripe_mode_unavailable' });
+    }
+    await this.plans.syncAllForMode(dto.mode);
+    await this.stripe.setMode(dto.mode, admin.id);
+    return this.get();
   }
 }

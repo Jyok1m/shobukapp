@@ -41,7 +41,7 @@ Stripe holds prices, cards, invoices and retries. The database holds a mirror go
 
 ## Payment reminders ("Relancer")
 
-- `POST /admin/members/:id/reminders { note? }` sends a French email to the practitioner with a link to `/abonnement`, and writes a `payment_reminders` row (author, date, note).
+- `POST /admin/members/:id/reminders { note? }` sends a French email to the practitioner with a link to `/cotisation`, and writes a `payment_reminders` row (author, date, note).
 - Without `SMTP_HOST`, the email is logged instead of sent and the row is still written: the demo works without a mail provider.
 - Stripe's own dunning emails (Settings, Billing, Subscriptions and emails) complement this; enable them in the Stripe dashboard rather than reimplementing retries.
 
@@ -49,8 +49,19 @@ Stripe holds prices, cards, invoices and retries. The database holds a mirror go
 
 A `StripeError` is caught by `StripeErrorFilter`: logged, answered as 502 `{ code: 'stripe_error' }`. Stripe messages describe our integration, not what the user did, and must not reach the browser.
 
+## Modes (test and live)
+
+Production carries two Stripe key pairs (`STRIPE_TEST_*`, `STRIPE_LIVE_*`); an admin switches the serving mode in the dashboard (`GET/PUT /admin/settings/billing`, password re-entered). This lets the dojo open signups and demo payments in test mode before the Stripe account is live, then go live without a deploy.
+
+- **Every Stripe object belongs to one mode.** Plans carry `stripe_test_*` and `stripe_live_*` product and price ids, users a customer id per mode, subscriptions and payments a `livemode` flag copied from Stripe. Test and live objects never cross.
+- **Only the current mode counts**: membership, payment history, admin lists and the export read the subscriptions and payments of the current mode. After going live, a subscription paid with a test card makes nobody a member.
+- **Plan edits reach the current mode only.** Switching runs `syncAllForMode` first: every plan gets its product and price in the target mode as the row describes it now (amount, interval, name, archived), comparing with the live price at Stripe. If Stripe refuses, the mode does not change.
+- **One webhook URL for both modes**: declare the endpoint twice in Stripe (once in test, once in live), each with its own secret. The API tries each configured secret and takes the mode from `event.livemode`.
+- A mode without key is unavailable (409 `stripe_mode_unavailable`). Without the current mode's key, billing answers 503 `billing_disabled`.
+- Migration `roles_and_stripe_modes` renamed the existing ids to the test columns: everything created so far came from a test key.
+
 ## Environments
 
-- `APP_ENV` decides the allowed Stripe mode: a `sk_live_` key outside `production` and a `sk_test_` key inside it stop the boot.
-- Without `STRIPE_SECRET_KEY`, billing routes answer 503 `billing_disabled` and the plans page hides purchase buttons. The rest of the app works.
-- In production, a key without `STRIPE_WEBHOOK_SECRET` stops the boot: we would sell subscriptions nothing records. In development it only disables the webhook route (503), since the secret comes from `stripe listen` once the API runs.
+- A live key outside `APP_ENV=production` stops the boot, as does a live key in the test slot or a test key in the live slot. The legacy `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` pair still works and lands in the slot its prefix names.
+- Without the current mode's key, billing routes answer 503 `billing_disabled` and the plans page hides purchase buttons. The rest of the app works.
+- In production, a key without its webhook secret stops the boot: we would sell subscriptions nothing records. In development it only disables the webhook (503), since the secret comes from `stripe listen` once the API runs.

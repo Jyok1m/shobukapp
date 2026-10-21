@@ -1,12 +1,22 @@
 import { Module } from '@nestjs/common';
-import { AdminPlansController, BillingController } from './billing.controller';
+import {
+  AdminBillingSettingsController,
+  AdminPlansController,
+  BillingController,
+} from './billing.controller';
+import { AuthModule } from '../auth/auth.module';
 import { PlansService } from './plans.service';
 import { StripeService } from './stripe.service';
 import { SubscriptionsService } from './subscriptions.service';
 import { WebhookService } from './webhook.service';
 
 @Module({
-  controllers: [BillingController, AdminPlansController],
+  imports: [AuthModule],
+  controllers: [
+    BillingController,
+    AdminPlansController,
+    AdminBillingSettingsController,
+  ],
   providers: [
     StripeService,
     PlansService,

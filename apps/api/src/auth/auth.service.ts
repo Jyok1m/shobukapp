@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   OnModuleInit,
   UnauthorizedException,
@@ -133,17 +134,44 @@ export class AuthService implements OnModuleInit {
     });
   }
 
-  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+  hashPassword(password: string): Promise<string> {
+    return hash(password);
+  }
+
+  // Re-entry of the acting user's own password before a sensitive action.
+  async confirmPassword(userId: string, password: string): Promise<void> {
     const { passwordHash } = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { passwordHash: true },
     });
+    if (!(await verify(passwordHash, password))) {
+      throw new ForbiddenException({ code: 'password_confirmation_failed' });
+    }
+  }
+
+  // Also the way out of a temporary password set by an admin.
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+    const { passwordHash, termsAcceptedAt } =
+      await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { passwordHash: true, termsAcceptedAt: true },
+      });
     if (!(await verify(passwordHash, dto.currentPassword))) {
       throw new UnauthorizedException({ code: 'invalid_credentials' });
     }
+    if (dto.newPassword === dto.currentPassword) {
+      throw new BadRequestException({ code: 'password_unchanged' });
+    }
+    if (!termsAcceptedAt && dto.acceptTerms !== true) {
+      throw new BadRequestException({ code: 'terms_required' });
+    }
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash: await hash(dto.newPassword) },
+      data: {
+        passwordHash: await hash(dto.newPassword),
+        mustChangePassword: false,
+        ...(!termsAcceptedAt && { termsAcceptedAt: new Date() }),
+      },
     });
   }
 }

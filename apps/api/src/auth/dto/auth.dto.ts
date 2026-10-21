@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
   Equals,
+  IsBoolean,
   IsEmail,
   IsOptional,
   IsString,
@@ -72,4 +73,9 @@ export class ChangePasswordDto {
   @MinLength(10)
   @MaxLength(128)
   newPassword!: string;
+
+  // Required when the account never accepted them (created by an admin).
+  @IsOptional()
+  @IsBoolean()
+  acceptTerms?: boolean;
 }
