@@ -295,6 +295,9 @@ export class SubscriptionsService {
     });
     return {
       amountDueCents: invoice.amount_due,
+      // Unused time worth more than the new price stays on the Stripe
+      // customer and is deducted from the next payments.
+      creditCents: Math.max(0, -(invoice.ending_balance ?? 0)),
       currency: invoice.currency,
     };
   }

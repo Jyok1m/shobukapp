@@ -19,6 +19,7 @@ A cotisation (a plan, "Adulte", "Étudiant") can be paid **yearly, quarterly or 
 - `proration_behavior: always_invoice`: Stripe invoices the difference at once and credits the unused time (monthly 25 € to yearly 240 € costs 215 € today; checked against Stripe test mode). An interval change also restarts the billing period.
 - `payment_behavior: pending_if_incomplete`: the change only applies once that invoice is paid. A declined card leaves the current frequency in place.
 - The subscription is re-synced right away; the webhook confirms it.
+- When the unused time is worth more than the new price (yearly to quarterly), nothing is due and the rest stays as a credit on the Stripe customer, deducted from the next payments: the preview returns it as `creditCents`.
 - Migration `plan_frequencies` turned each existing plan into one price row at its former interval, Stripe ids included.
 
 ## Plans (admin CRUD)
