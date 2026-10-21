@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense, type ReactNode } from "react";
+import { Suspense, cache, type ReactNode } from "react";
+import { DocumentBoardSections } from "@/components/documents/document-board";
 import { MembershipBadge } from "@/components/membership-badge";
+import { NotCarriedNotice } from "@/components/billing/test-mode-notices";
+import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { apiGet } from "@/lib/api";
 import { cotisationLabel, formatDate, profileCompleteness } from "@/lib/format";
 import { requireUser } from "@/lib/session";
-import type { Membership } from "@/lib/types";
+import type { DocumentBoard, Membership } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Tableau de bord" };
+
+/* Read once per request by the notice and the card. */
+const getMembership = cache(() => apiGet<Membership>("/billing/subscription"));
 
 function LinkCard({ href, title, children }: { href: string; title: string; children: ReactNode }) {
   return (
@@ -44,12 +50,13 @@ async function Greeting() {
 
 async function MembershipSummary() {
   await requireUser();
-  const membership = await apiGet<Membership>("/billing/subscription");
+  const membership = await getMembership();
   return (
     <LinkCard href="/cotisation" title="Ma cotisation">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <MembershipBadge status={membership.status} />
+          {membership.testMode && <Badge tone="warning">Démonstration</Badge>}
           {membership.planName && (
             <span className="text-sm text-ink">{cotisationLabel(membership.planName, membership.frequency)}</span>
           )}
@@ -69,6 +76,18 @@ async function MembershipSummary() {
       </div>
     </LinkCard>
   );
+}
+
+async function CarriedOver() {
+  await requireUser();
+  const membership = await getMembership();
+  return membership.testCotisationNotCarried ? <NotCarriedNotice className="mb-6" /> : null;
+}
+
+async function Board() {
+  await requireUser();
+  const board = await apiGet<DocumentBoard>("/documents/board");
+  return <DocumentBoardSections board={board} />;
 }
 
 async function ProfileSummary() {
@@ -104,6 +123,9 @@ export default function DashboardPage() {
       <Suspense fallback={<PageHeader title="Bonjour" />}>
         <Greeting />
       </Suspense>
+      <Suspense fallback={null}>
+        <CarriedOver />
+      </Suspense>
       <div className="grid gap-4 md:grid-cols-3">
         <Suspense fallback={<CardFallback title="Ma cotisation" />}>
           <MembershipSummary />
@@ -114,6 +136,11 @@ export default function DashboardPage() {
         <LinkCard href="/documents" title="Déposer mon certificat médical">
           <p className="text-sm text-muted">Indispensable pour pratiquer.</p>
         </LinkCard>
+      </div>
+      <div className="mt-10 flex flex-col gap-10">
+        <Suspense fallback={null}>
+          <Board />
+        </Suspense>
       </div>
     </div>
   );

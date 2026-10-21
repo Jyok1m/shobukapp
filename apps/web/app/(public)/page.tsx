@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { PlanCard, PlanGrid, PriceList } from "@/components/billing/plan-card";
+import { DojoSiteLink } from "@/components/dojo-site-link";
 import { buttonClasses } from "@/components/ui/button";
 import { publicApiGet } from "@/lib/api";
 import type { PublicPlan } from "@/lib/types";
@@ -50,6 +51,9 @@ export default function HomePage() {
           <Link href="/connexion" className={buttonClasses("secondary", "md", "h-11 px-6")}>
             Connexion
           </Link>
+        </div>
+        <div>
+          <DojoSiteLink className="min-h-11 text-sm font-medium text-accent hover:underline sm:min-h-0" />
         </div>
       </section>
 

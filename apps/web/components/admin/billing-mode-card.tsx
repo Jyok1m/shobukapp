@@ -28,6 +28,7 @@ export function BillingModeCard({ settings }: { settings: BillingSettings }) {
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notified, setNotified] = useState<number | null>(null);
   const target: StripeMode = settings.mode === "test" ? "live" : "test";
   const available = settings.configured[target];
   const current = modeCopy[settings.mode];
@@ -41,6 +42,7 @@ export function BillingModeCard({ settings }: { settings: BillingSettings }) {
     if (!result.ok) return setError(result.error);
     setOpen(false);
     setPassword("");
+    setNotified(result.data.notified ?? null);
     router.refresh();
   }
 
@@ -54,6 +56,13 @@ export function BillingModeCard({ settings }: { settings: BillingSettings }) {
             </Badge>
           </p>
           <p className="text-sm text-ink">{current.text}</p>
+          {notified !== null && (
+            <Notice tone="success">
+              {notified === 0
+                ? "Aucun membre n'avait de cotisation de démonstration à prévenir."
+                : `${notified} membre${notified > 1 ? "s" : ""} prévenu${notified > 1 ? "s" : ""} par e-mail.`}
+            </Notice>
+          )}
           {settings.updatedAt && (
             <p className="text-xs text-muted">
               Mode choisi le {formatDate(settings.updatedAt)}
@@ -93,6 +102,10 @@ export function BillingModeCard({ settings }: { settings: BillingSettings }) {
                 <li>Chaque formule active est d&apos;abord créée en mode live chez Stripe. Si Stripe refuse, rien ne change.</li>
                 <li>Les cotisations payées en mode test ne comptent plus : personne n&apos;est membre grâce à une carte de test.</li>
                 <li>Les membres devront payer de nouveau, avec une vraie carte.</li>
+                <li>
+                  Les membres qui avaient une cotisation de démonstration sont prévenus par e-mail. Ils gardent toutes
+                  leurs données (profil, documents, messages), sauf cette cotisation de démonstration.
+                </li>
               </ul>
             </div>
           ) : (

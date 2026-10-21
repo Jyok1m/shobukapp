@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Brand } from "@/components/brand";
+import { DojoSiteLink } from "@/components/dojo-site-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonClasses } from "@/components/ui/button";
 
@@ -11,6 +12,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <Brand />
           <div className="flex flex-wrap items-center gap-1 sm:gap-2">
             <ThemeToggle compact />
+            <DojoSiteLink
+              label="Site du dojo"
+              className="hidden min-h-10 rounded-md px-3 text-sm font-medium text-ink hover:bg-ink/5 sm:inline-flex sm:min-h-8"
+            />
             <nav aria-label="Accès membres" className="flex items-center gap-1 sm:gap-2">
               <Link href="/connexion" className={buttonClasses("ghost", "sm")}>
                 Connexion
@@ -25,6 +30,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <main className="flex flex-1 flex-col">{children}</main>
       <footer className="flex flex-col items-center gap-2 border-t border-line px-4 py-6 text-center text-xs text-muted sm:flex-row sm:justify-center sm:gap-4">
         <span>Shobukan Dojo, club de kendo</span>
+        <DojoSiteLink className="min-h-10 font-medium text-accent hover:underline sm:min-h-0" />
         <Link href="/confidentialite" className="inline-flex min-h-10 items-center underline-offset-2 hover:text-ink hover:underline sm:min-h-0">
           Confidentialité et cookies
         </Link>

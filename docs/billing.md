@@ -17,7 +17,8 @@ A cotisation (a plan, "Adulte", "Étudiant") can be paid **yearly, quarterly or 
 `POST /billing/subscription/frequency/preview {frequency}` returns the amount due now; `POST /billing/subscription/frequency {frequency}` applies it. Same cotisation, another of its offered prices; only for an `active` or `trialing` cotisation of the current mode (`no_active_cotisation`, `same_frequency`, `frequency_not_offered`).
 
 - `proration_behavior: always_invoice`: Stripe invoices the difference at once and credits the unused time (monthly 25 € to yearly 240 € costs 215 € today; checked against Stripe test mode). An interval change also restarts the billing period.
-- `payment_behavior: pending_if_incomplete`: the change only applies once that invoice is paid. A declined card leaves the current frequency in place.
+- `payment_behavior: pending_if_incomplete`: the change only applies once that invoice is paid. **A declined card does not throw**: Stripe answers 200 with `pending_update` and keeps the old price (checked in test mode with `pm_card_chargeCustomerFail`). The API then voids the open invoice (otherwise paying it later would apply the change by surprise; voiding also clears the pending update) and answers 402 `payment_declined`.
+- Idempotency key on the update: subscription, old price, new price and current period start. Two tabs or a retry send one update; going back and forth in a later period is a new request.
 - The subscription is re-synced right away; the webhook confirms it.
 - When the unused time is worth more than the new price (yearly to quarterly), nothing is due and the rest stays as a credit on the Stripe customer, deducted from the next payments: the preview returns it as `creditCents`.
 - Migration `plan_frequencies` turned each existing plan into one price row at its former interval, Stripe ids included.

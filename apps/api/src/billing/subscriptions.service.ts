@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  HttpException,
   Injectable,
   Logger,
   NotFoundException,
@@ -307,13 +308,39 @@ export class SubscriptionsService {
       user,
       frequency,
     );
-    await stripe.subscriptions.update(remote.id, {
-      items: [{ id: item.id, price: priceId }],
-      proration_behavior: 'always_invoice',
-      // Not applied until the prorated invoice is paid: a declined card
-      // leaves the current frequency in place.
-      payment_behavior: 'pending_if_incomplete',
-    });
+    const updated = await stripe.subscriptions.update(
+      remote.id,
+      {
+        items: [{ id: item.id, price: priceId }],
+        proration_behavior: 'always_invoice',
+        // Not applied until the prorated invoice is paid: a declined card
+        // leaves the current frequency in place.
+        payment_behavior: 'pending_if_incomplete',
+        expand: ['latest_invoice'],
+      },
+      // Two tabs or a retry send one update. Keyed on the period too, so going
+      // back and forth on another day is a new request.
+      {
+        idempotencyKey: `frequency-${remote.id}-${item.price.id}-${priceId}-${item.current_period_start}`,
+      },
+    );
+
+    /*
+     * A declined card does not throw: Stripe answers 200 with a pending update
+     * and leaves the old price. Its invoice stays open, and paying it later
+     * would apply the change by surprise: it is voided, and the member is told.
+     */
+    if (updated.pending_update) {
+      const invoice = updated.latest_invoice;
+      if (invoice && typeof invoice !== 'string' && invoice.status === 'open') {
+        await stripe.invoices
+          .voidInvoice(invoice.id!)
+          .catch((error: unknown) =>
+            this.logger.warn(`Could not void ${invoice.id}: ${String(error)}`),
+          );
+      }
+      throw new HttpException({ code: 'payment_declined' }, 402);
+    }
     await this.syncFromStripe(remote.id, mode);
     return this.membership(user.id);
   }

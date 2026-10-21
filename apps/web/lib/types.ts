@@ -105,6 +105,7 @@ export type Payment = {
 export type Membership = {
   status: string | null;
   isMember: boolean;
+  planId: string | null;
   planName: string | null;
   frequency: Frequency | null;
   currentPeriodEnd: string | null;
@@ -112,6 +113,8 @@ export type Membership = {
   manageable: boolean;
   /* Stripe test mode: payments are simulated. */
   testMode: boolean;
+  /* Live mode, and the member had a cotisation paid in test mode: it does not carry over. */
+  testCotisationNotCarried: boolean;
   payments: Payment[];
 };
 
@@ -185,6 +188,8 @@ export type BillingSettings = {
   configured: Record<StripeMode, boolean>;
   updatedAt: string | null;
   updatedBy: { firstName: string; lastName: string } | null;
+  /* Only after a test to live switch: members told their demo cotisation is not carried over. */
+  notified?: number;
 };
 
 /* POST /admin/members */
@@ -198,7 +203,10 @@ export type ReminderResult = {
   delivery: "sent" | "logged";
 };
 
-export type DocumentCategory = "MEDICAL_CERTIFICATE" | "LEGAL" | "ACCOUNTING" | "OTHER";
+export type DocumentCategory = "MEDICAL_CERTIFICATE" | "LEGAL" | "RULES" | "ACCOUNTING" | "OTHER";
+
+/* Where a dojo document shows: admins only, the dashboard board, or the important list. */
+export type Placement = "PRIVATE" | "ANNOUNCEMENT" | "IMPORTANT";
 
 /* A member document (ownerId set) or a dojo document (ownerId null). */
 export type MemberDocument = {
@@ -209,9 +217,22 @@ export type MemberDocument = {
   mimeType: string;
   sizeBytes: number;
   validUntil: string | null;
+  /* Dojo documents only; a member document is always PRIVATE. */
+  placement?: Placement;
+  description?: string | null;
+  publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+/* GET /documents/board: what every signed-in member sees on the dashboard. */
+export type DocumentBoard = {
+  announcements: MemberDocument[];
+  important: MemberDocument[];
+};
+
+/* POST /billing/subscription/frequency/preview */
+export type FrequencyPreview = { amountDueCents: number; creditCents: number; currency: string };
 
 export type License = {
   id: string;
