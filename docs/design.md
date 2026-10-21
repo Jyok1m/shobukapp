@@ -1,6 +1,6 @@
 # Design
 
-To align with the identity of https://www.shobukan-dojo.com (logo, colours) once assets are provided. Until then, a sober base that does not need to be undone.
+Identity of https://www.shobukan-dojo.com. **Logo**: the kanji 武 (bu), single colour. `components/logo.tsx` draws it in `currentColor` (accent red in the brand, light red in dark mode); `public/logo.svg` is the cleaned standalone file (black); `app/icon.svg` is the favicon (accent red, light red when the browser is dark); `app/apple-icon.png` (180 px, paper background, iOS ignores transparency) is generated from it with `rsvg-convert`. Never raster the logo for display in the app: it stays vector.
 
 - Tailwind 4 tokens in `app/globals.css` under `@theme`: `ink` (text), `paper` (background), `surface`, `line`, `field` (input borders, 3:1 against the background), `accent` / `accent-strong` / `accent-soft` (deep red), `on-accent` (text on accent or danger), `muted`, `danger` / `danger-soft`, `success` / `success-soft`, `warning` / `warning-soft` (Stripe test mode), `scrim` (dialog and menu backdrops). Components use the tokens, never raw colors (`bg-white`, `zinc-*`, hex).
 - **Dark mode**: every token is redefined under `prefers-color-scheme: dark` (via `:root:not([data-theme="light"])`) and under `:root[data-theme="dark"]`. The Clair / Sombre / Système choice is stored in localStorage (try/catch) and applied before paint by an inline script in `<head>` (`lib/theme-script.ts`, a constant: never interpolate anything user-controlled into it). Contrast AA checked in both themes.

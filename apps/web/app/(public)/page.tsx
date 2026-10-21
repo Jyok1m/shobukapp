@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { PlanCard, PlanGrid, PriceList } from "@/components/billing/plan-card";
 import { DojoContact } from "@/components/dojo-contact";
+import { Logo } from "@/components/logo";
 import { DojoSiteLink } from "@/components/dojo-site-link";
 import { DOJO } from "@/lib/dojo";
 import { buttonClasses } from "@/components/ui/button";
@@ -39,6 +40,7 @@ export default function HomePage() {
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-16 px-4 py-16 sm:px-6">
       <section className="flex max-w-3xl flex-col gap-8">
         <div className="flex flex-col gap-4">
+          <Logo className="h-20 w-auto self-start text-accent sm:h-24" />
           <p className="text-sm font-medium tracking-widest text-accent uppercase">Espace membres</p>
           <h1 className="font-serif text-4xl font-bold text-ink sm:text-5xl">Shobukan Hombu Dojo</h1>
           <p className="text-sm font-medium text-ink">{DOJO.disciplines}</p>
