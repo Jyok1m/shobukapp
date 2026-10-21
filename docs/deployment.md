@@ -45,11 +45,13 @@ GitHub Actions (`.github/workflows/trigger_jenkins.yml`) triggers the Jenkins jo
 
 ### First admin
 
-Signup is invitation-only and no admin exists yet to issue one. From a workstation, open the SSH tunnel to the production database (loopback `5433`, credentials in the vault), then:
+Signup is invitation-only and no admin exists yet to issue one. The admin scripts are compiled into the api image and read `DATABASE_URL` from the container's env file, so they run on the server, inside the running container:
 
 ```bash
-DATABASE_URL="postgresql://shobukapp:<password>@localhost:5433/shobukapp?schema=public" \
-  pnpm --filter @shobukapp/api admin:invite <email> <first name> <last name>
-# prints an activation code: create the account on /activation, then
-DATABASE_URL=... pnpm --filter @shobukapp/api admin:grant <email>
+ssh <host>
+docker exec shobukapp-api node dist/src/scripts/admin-invite.js <email> <first name> <last name>
+# prints an activation code: create the account on https://shobukapp.joachimjasmin.com/activation, then
+docker exec shobukapp-api node dist/src/scripts/admin-grant.js <email>
 ```
+
+Same on staging with `shobukapp-api-dev`. Every later admin is invited from `/admin/invitations` and promoted with `admin:grant` the same way: no HTTP route grants the role.
