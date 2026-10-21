@@ -264,13 +264,18 @@ export class OnboardingService {
     return { code: display, expiresAt, delivery };
   }
 
-  async listInvitations() {
+  async listInvitations(cursor?: string) {
     const rows = await this.prisma.invitation.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 200,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: PAGE_SIZE + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
       select: { ...invitationView, joinRequestId: true },
     });
-    return rows.map((row) => ({ ...row, status: invitationStatus(row) }));
+    const page = rows.slice(0, PAGE_SIZE);
+    return {
+      items: page.map((row) => ({ ...row, status: invitationStatus(row) })),
+      nextCursor: rows.length > PAGE_SIZE ? page[page.length - 1].id : null,
+    };
   }
 
   async revokeInvitation(id: string): Promise<void> {

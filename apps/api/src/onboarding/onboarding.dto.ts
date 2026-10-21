@@ -76,3 +76,9 @@ export class ListJoinRequestsQuery {
   @IsUUID()
   cursor?: string;
 }
+
+export class CursorQuery {
+  @IsOptional()
+  @IsUUID()
+  cursor?: string;
+}

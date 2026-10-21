@@ -12,6 +12,14 @@ import { SESSION_COOKIE } from '../auth/session.service';
 @Injectable()
 export class AppThrottlerGuard extends ThrottlerGuard {
   protected getTracker(req: Record<string, any>): Promise<string> {
+    // The invitation preview is a GET from the web server: keyed on the
+    // token, or one shared bucket would let anyone lock every invitee out.
+    const params = req.params as { token?: unknown } | undefined;
+    if (typeof params?.token === 'string') {
+      return Promise.resolve(
+        `token:${createHash('sha256').update(params.token).digest('hex')}`,
+      );
+    }
     const body = req.body as { email?: unknown; token?: unknown } | undefined;
     if (typeof body?.email === 'string') {
       return Promise.resolve(`email:${body.email.trim().toLowerCase()}`);

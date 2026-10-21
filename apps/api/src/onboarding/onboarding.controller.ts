@@ -16,6 +16,7 @@ import type { SelfUser } from '../common/self-user';
 import {
   CreateCodeInvitationDto,
   CreateJoinRequestDto,
+  CursorQuery,
   ListJoinRequestsQuery,
   UpdateJoinRequestDto,
 } from './onboarding.dto';
@@ -89,8 +90,8 @@ export class AdminOnboardingController {
   }
 
   @Get('invitations')
-  invitations() {
-    return this.onboarding.listInvitations();
+  invitations(@Query() query: CursorQuery) {
+    return this.onboarding.listInvitations(query.cursor);
   }
 
   @Post('invitations')

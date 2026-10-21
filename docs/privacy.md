@@ -11,6 +11,8 @@ The dojo is the data controller. This app processes identity, contact, licence i
 - **Passwords**: never exported, never visible to admins. Admins edit every other field.
 - **Card data** never touches our servers (Stripe Checkout and Portal).
 
+- **Join requests** (`onboarding.md`) are data of people who are not members: name, email, optional phone, a free message. Only admins read them; an admin can delete one at any time. The form states that the data only serves to answer the request.
+
 ## Rights
 
 - Access and portability: the member can download their own data (profile, documents, licences, messages) as a zip. Not in the MVP; the admin export covers urgent requests.
@@ -18,6 +20,7 @@ The dojo is the data controller. This app processes identity, contact, licence i
 
 ## To decide with the dojo before production
 
+- Retention of join requests: suggested, delete declined or unanswered requests after six months, and invited ones once the account exists.
 - Retention period after a member leaves (suggested: delete after one season without membership, keep licence numbers if the federation requires it).
 - Privacy policy and terms pages, and the consent checkbox at signup that points to them.
 - Hosting location of the database and files (EU).

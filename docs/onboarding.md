@@ -13,7 +13,7 @@ Sending a link again revokes the previous one: only the latest works.
 ## Existing practitioners: email and code
 
 1. The admin creates a code in `/admin/invitations` (`POST /admin/invitations {firstName, lastName, email}`). It is mailed and shown **once** to the admin (format `XXXX-XXXX`, Crockford base32, no I/L/O/U), never stored in clear. Creating a new code for the same address revokes the previous pending ones.
-2. On `/connexion`, "Je suis déjà pratiquant mais je n'ai pas encore de compte" leads to `/activation`: email, code, names, password. `POST /auth/register {email, code, ...}`. Input is normalised (case, spaces, dash, O read as 0, I and L as 1).
+2. On `/connexion`, "Je pratique déjà au dojo mais je n'ai pas encore de compte" leads to `/activation`: email, code, names, password. `POST /auth/register {email, code, ...}`. Input is normalised (case, spaces, dash, O read as 0, I and L as 1).
 
 ## Rules
 
@@ -22,6 +22,8 @@ Sending a link again revokes the previous one: only the latest works.
 - The invitation is claimed atomically (`updateMany ... where used_at is null and not expired`) in the same transaction as the user creation: two submissions of one link cannot both win, and a failed creation releases nothing.
 - Invitations expire after 14 days. An address that already has an account cannot be invited (`email_taken`).
 - Tokens and codes are stored as SHA-256 hashes. Links are 32 random bytes; codes are short by design, so their safety rests on the lockout and expiry, not on the hash.
+- `GET /auth/invitations/:token` is throttled per token (20 per minute), not per IP: every call comes from the web server, so an IP bucket would let anyone lock every invitee out. The web never puts the token in an error message (logs, digests), and `/inscription` is served with `Referrer-Policy: no-referrer`.
+- `GET /admin/invitations` paginates by cursor (50 per page).
 - `POST /join-requests` is public: throttled to 5 per hour per email, and a hidden `website` field (honeypot) makes a bot's submission answer 202 without being stored. The answer is the same in every case.
 - Mail failures never fail a request: the row is stored and the dashboard shows it.
 - Join requests are personal data of people who are not members: retention to decide with the dojo (`privacy.md`).

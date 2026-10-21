@@ -199,6 +199,17 @@ describe('Onboarding (e2e)', () => {
       .expect(409);
   });
 
+  it('throttles link previews per token, not for everyone at once', async () => {
+    const server = app.getHttpServer();
+    const hammered = 'y'.repeat(43);
+    for (let i = 0; i < 20; i++) {
+      await request(server).get(`/auth/invitations/${hammered}`).expect(404);
+    }
+    await request(server).get(`/auth/invitations/${hammered}`).expect(429);
+    const { token } = await createLinkInvitation(app);
+    await request(server).get(`/auth/invitations/${token}`).expect(200);
+  });
+
   it('guards every admin onboarding route', async () => {
     const practitioner = await registerUser(app);
     const server = app.getHttpServer();
