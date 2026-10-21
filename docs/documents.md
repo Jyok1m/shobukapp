@@ -20,12 +20,14 @@
 
 - Same table with `owner_id = null` and category `LEGAL`, `ACCOUNTING` or `OTHER`. A member can only create `MEDICAL_CERTIFICATE` or `OTHER` for themself.
 - `GET /admin/documents/members/:userId` lists a member's documents for admins (to check certificates); files are read through the same `/documents/:id/file`.
-- `GET /admin/documents` and `POST /admin/documents` (multipart), admins only. Renaming and deleting a dojo document go through `PATCH` and `DELETE /documents/:id`, which allow an admin on any document. Open question: should practitioners read legal documents (statuts, règlement intérieur)? Likely yes, through a `shared_with_members` flag; not in the MVP.
+- Categories: `LEGAL` (statuts, conditions), `RULES` (règlement intérieur), `ACCOUNTING`, `OTHER`.
+- **Publishing to members**: a dojo document has a `placement`: `PRIVATE` (admins only, the default), `ANNOUNCEMENT` (the dashboard's "Panneau d'annonces") or `IMPORTANT` ("Documents importants"), plus an optional `description` shown with it. `GET /documents/board` gives every signed-in member `{announcements, important}`; they can download a published document, never edit or delete it. `published_at` is set when it leaves `PRIVATE`. A member's own document (a medical certificate) can never be published (`not_publishable`).
+- `GET /admin/documents` and `POST /admin/documents` (multipart, with `placement` and `description`), admins only. Renaming and deleting a dojo document go through `PATCH` and `DELETE /documents/:id`, which allow an admin on any document. 
 
-## FFK licences
+## FFJDA licences
 
 - One row per user and season (`unique(user_id, season)`), uploaded by an admin with the licence number and the PDF.
 - `GET /licenses` for the member, `GET /licenses/:id/file`; `GET /admin/licenses?userId=`, `POST /admin/licenses` (multipart: userId, season `YYYY-YYYY`, number, optional file: upsert on user and season), `DELETE /admin/licenses/:id` for admins. Licence mime types are sniffed on read, the table has no mime column.
 - Re-uploading for the same season replaces the file (the old one is removed) and keeps the row.
 - Download filenames are built from the title, ASCII only, with an extension derived from the sniffed type: an uploaded filename is never reused.
-- The legal information needed to request a licence comes from the profile (`members.md`). Generating the FFK request automatically is out of scope.
+- The legal information needed to request a licence comes from the profile (`members.md`). Generating the FFJDA request automatically is out of scope.

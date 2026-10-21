@@ -15,12 +15,13 @@ export const config = {
   matcher: [
     "/tableau-de-bord/:path*",
     "/profil/:path*",
-    "/abonnement/:path*",
+    "/cotisation/:path*",
     "/annuaire/:path*",
     "/messagerie/:path*",
     "/documents/:path*",
     "/licences/:path*",
     "/admin/:path*",
     "/admin",
+    "/premiere-connexion",
   ],
 };

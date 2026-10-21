@@ -24,7 +24,7 @@ export function PortalButton({ variant = "primary" }: { variant?: ButtonVariant 
   return (
     <div className="flex flex-col gap-2">
       <Button variant={variant} onClick={onClick} loading={pending}>
-        Gérer mon abonnement
+        Gérer ma cotisation
       </Button>
       {error && (
         <p role="alert" className="text-xs font-medium text-danger">

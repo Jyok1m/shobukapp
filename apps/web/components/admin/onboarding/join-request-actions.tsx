@@ -94,8 +94,7 @@ export function JoinRequestActions({ request }: { request: JoinRequest }) {
           )
         )}
         <Button
-          variant="ghost"
-          className="text-danger"
+          variant="ghost-danger"
           disabled={pending !== null}
           onClick={() => {
             setDialogError(null);

@@ -8,10 +8,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Th } from "@/components/ui/table";
 import { apiRequest } from "@/lib/client-api";
-import { categoryLabels, certificateState, formatBytes } from "@/lib/documents";
+import { categoryLabels, certificateState, formatBytes, placementLabels } from "@/lib/documents";
 import { formatShortDate } from "@/lib/format";
 import type { MemberDocument } from "@/lib/types";
 import { DocumentEditDialog } from "./document-edit-dialog";
+import { DocumentPlacementDialog } from "./document-placement-dialog";
 
 function Validity({ document }: { document: MemberDocument }) {
   if (document.category !== "MEDICAL_CERTIFICATE") return <span className="text-muted">Sans objet</span>;
@@ -28,6 +29,7 @@ export function DocumentList({
   editable = false,
   showCategory = true,
   showValidity = true,
+  withPlacement = false,
   caption,
   emptyTitle,
   emptyDescription,
@@ -36,12 +38,15 @@ export function DocumentList({
   editable?: boolean;
   showCategory?: boolean;
   showValidity?: boolean;
+  /* Dojo documents: a badge of where each one shows, and a button to change it. */
+  withPlacement?: boolean;
   caption: string;
   emptyTitle: string;
   emptyDescription?: string;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<MemberDocument | null>(null);
+  const [placing, setPlacing] = useState<MemberDocument | null>(null);
   const [deleting, setDeleting] = useState<MemberDocument | null>(null);
   const [pending, setPending] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -83,6 +88,19 @@ export function DocumentList({
                 <Td className="min-w-48">
                   <p className="font-medium break-words">{document.title}</p>
                   <p className="text-xs text-muted">{formatBytes(document.sizeBytes)}</p>
+                  {withPlacement && (
+                    <p className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <Badge tone={placementLabels[document.placement ?? "PRIVATE"].tone}>
+                        {placementLabels[document.placement ?? "PRIVATE"].label}
+                      </Badge>
+                      {document.publishedAt && document.placement !== "PRIVATE" && (
+                        <span className="text-xs text-muted">publié le {formatShortDate(document.publishedAt)}</span>
+                      )}
+                    </p>
+                  )}
+                  {withPlacement && document.description && (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted">{document.description}</p>
+                  )}
                 </Td>
                 {showCategory && <Td className="whitespace-nowrap">{categoryLabels[document.category]}</Td>}
                 {showValidity && (
@@ -96,20 +114,24 @@ export function DocumentList({
                     <a
                       href={`/api/documents/${document.id}/file`}
                       download
-                      className="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-accent hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent"
+                      className="inline-flex min-h-10 sm:min-h-8 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-accent hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent"
                       aria-label={`Télécharger ${document.title}`}
                     >
                       Télécharger
                     </a>
                     {editable && (
                       <>
+                        {withPlacement && (
+                          <Button variant="secondary" size="sm" onClick={() => setPlacing(document)}>
+                            Affichage
+                          </Button>
+                        )}
                         <Button variant="secondary" size="sm" onClick={() => setEditing(document)}>
                           Modifier
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="ghost-danger"
                           size="sm"
-                          className="text-danger"
                           onClick={() => {
                             setDeleteError(null);
                             setDeleting(document);
@@ -128,6 +150,14 @@ export function DocumentList({
       </Table>
       {editable && (
         <>
+          <DocumentPlacementDialog
+            document={placing}
+            onClose={() => setPlacing(null)}
+            onSaved={() => {
+              setPlacing(null);
+              router.refresh();
+            }}
+          />
           <DocumentEditDialog
             document={editing}
             onClose={() => setEditing(null)}

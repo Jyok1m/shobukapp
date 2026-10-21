@@ -11,7 +11,8 @@ import { Notice } from "@/components/ui/notice";
 import { Select } from "@/components/ui/select";
 import { apiRequest } from "@/lib/client-api";
 import { categoryLabels, checkDocumentFile, DOCUMENT_ACCEPT, documentUploadError } from "@/lib/documents";
-import type { DocumentCategory } from "@/lib/types";
+import type { DocumentCategory, Placement } from "@/lib/types";
+import { PlacementFields } from "./placement-fields";
 
 type Errors = Partial<Record<"file" | "title" | "validUntil", string>>;
 
@@ -21,15 +22,19 @@ export function DocumentUploadForm({
   categories,
   title,
   description,
+  withPlacement = false,
 }: {
   endpoint: "/documents" | "/admin/documents";
   categories: DocumentCategory[];
   title: string;
   description: string;
+  /* Dojo documents: where they show to members, with an optional description. */
+  withPlacement?: boolean;
 }) {
   const router = useRouter();
   const [category, setCategory] = useState<DocumentCategory>(categories[0]);
   const [docTitle, setDocTitle] = useState("");
+  const [placement, setPlacement] = useState<Placement>("PRIVATE");
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -69,6 +74,11 @@ export function DocumentUploadForm({
     body.append("title", docTitle.trim());
     body.append("category", category);
     if (withValidity) body.append("validUntil", validUntil);
+    if (withPlacement) {
+      body.append("placement", placement);
+      const text = String(data.get("description") ?? "").trim();
+      if (text) body.append("description", text);
+    }
 
     setPending(true);
     const result = await apiRequest("POST", endpoint, body);
@@ -76,6 +86,7 @@ export function DocumentUploadForm({
     if (!result.ok) return setError(documentUploadError(result));
     setSaved(true);
     setDocTitle("");
+    setPlacement("PRIVATE");
     setFormKey((key) => key + 1);
     router.refresh();
   }
@@ -118,6 +129,14 @@ export function DocumentUploadForm({
               <Input {...control} value={docTitle} onChange={(event) => setDocTitle(event.target.value)} maxLength={120} />
             )}
           </Field>
+          {withPlacement && (
+            <PlacementFields
+              idPrefix="document"
+              category={category}
+              placement={placement}
+              onPlacementChange={setPlacement}
+            />
+          )}
           {withValidity && (
             <Field
               id="document-valid-until"

@@ -83,7 +83,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
 
   return (
     <Card
-      title="Licences FFK"
+      title="Licences FFJDA"
       description="Une licence par saison. Enregistrer une saison existante remplace son numéro, et son fichier si vous en joignez un."
     >
       <div className="flex flex-col gap-6">
@@ -114,7 +114,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
                         <a
                           href={`/api/licenses/${license.id}/file`}
                           download
-                          className="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-accent hover:bg-ink/5"
+                          className="inline-flex min-h-10 sm:min-h-8 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-accent hover:bg-ink/5"
                           aria-label={`Télécharger la licence ${license.season}`}
                         >
                           Télécharger
@@ -123,9 +123,8 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
                         <span className="px-3 text-sm whitespace-nowrap text-muted">Sans fichier</span>
                       )}
                       <Button
-                        variant="ghost"
+                        variant="ghost-danger"
                         size="sm"
-                        className="text-danger"
                         onClick={() => {
                           setDeleteError(null);
                           setDeleting(license);

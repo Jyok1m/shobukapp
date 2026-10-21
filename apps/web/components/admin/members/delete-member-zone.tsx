@@ -43,7 +43,7 @@ export function DeleteMemberZone({ memberId, firstName, lastName }: { memberId: 
       </h2>
       <p className="mt-1 text-sm text-muted">
         La suppression efface définitivement le compte, le profil, les documents, les messages envoyés et
-        l&apos;historique du membre. Son abonnement Stripe est résilié immédiatement. Les factures restent chez Stripe,
+        l&apos;historique du membre. Sa cotisation est résiliée immédiatement chez Stripe. Les factures restent chez Stripe,
         comme la loi l&apos;exige.
       </p>
       <Button
@@ -61,7 +61,7 @@ export function DeleteMemberZone({ memberId, firstName, lastName }: { memberId: 
       <ConfirmDialog
         open={open}
         title={`Supprimer ${firstName} ${lastName} ?`}
-        description="Cette action est irréversible. L'abonnement Stripe du membre est résilié immédiatement, puis ses fichiers et ses données sont effacés."
+        description="Cette action est irréversible. La cotisation Stripe du membre est résiliée immédiatement, puis ses fichiers et ses données sont effacés."
         confirmLabel="Supprimer définitivement"
         pending={pending}
         error={error}

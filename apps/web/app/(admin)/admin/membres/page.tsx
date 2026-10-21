@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { MemberSearch } from "@/components/admin/members/member-search";
 import { MembersTable } from "@/components/admin/members/members-table";
@@ -27,9 +28,14 @@ async function Members({ searchParams }: { searchParams: SearchParams }) {
           L&apos;export est journalisé (qui, quand). Il ne contient jamais les mots de passe ni les documents médicaux.
         </p>
         {/* Same-origin link: the session cookie goes with it and the API answers with an attachment. */}
-        <a href="/api/admin/members/export" download className={buttonClasses("secondary", "md", "shrink-0")}>
-          Exporter (CSV)
-        </a>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <Link href="/admin/membres/nouveau" className={buttonClasses("primary", "md")}>
+            Créer un membre
+          </Link>
+          <a href="/api/admin/members/export" download className={buttonClasses("secondary", "md")}>
+            Exporter (CSV)
+          </a>
+        </div>
       </div>
       <MemberSearch action="/admin/membres" query={query} />
       <MembersTable key={query.q} initial={page} query={query} />

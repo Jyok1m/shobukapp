@@ -22,8 +22,10 @@ enum Sex {
   MALE
 }
 
+// How often a cotisation is paid. QUARTER is a Stripe price every 3 months.
 enum PlanInterval {
   MONTH
+  QUARTER
   YEAR
 }
 
@@ -36,8 +38,16 @@ enum PaymentStatus {
 enum DocumentCategory {
   MEDICAL_CERTIFICATE
   LEGAL
+  RULES
   ACCOUNTING
   OTHER
+}
+
+// Where a dojo document shows on the members' dashboard. PRIVATE: admins only.
+enum DocumentPlacement {
+  PRIVATE
+  ANNOUNCEMENT
+  IMPORTANT
 }
 
 enum ReminderChannel {
@@ -76,8 +86,14 @@ model User {
   emergencyContactName  String?   @map("emergency_contact_name")
   emergencyContactPhone String?   @map("emergency_contact_phone")
   directoryVisible      Boolean   @default(false) @map("directory_visible")
-  stripeCustomerId      String?   @unique @map("stripe_customer_id")
-  termsAcceptedAt       DateTime  @map("terms_accepted_at")
+  // One Stripe customer per mode: test and live objects never cross.
+  stripeTestCustomerId  String?   @unique @map("stripe_test_customer_id")
+  stripeLiveCustomerId  String?   @unique @map("stripe_live_customer_id")
+  // Null for an account an admin created: accepted at first login.
+  termsAcceptedAt       DateTime? @map("terms_accepted_at")
+  // Set when an admin chose the password: every route but the password change
+  // answers 403 until the member picks their own (docs/members.md).
+  mustChangePassword    Boolean   @default(false) @map("must_change_password")
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
@@ -96,6 +112,9 @@ model User {
   invitationsSent     Invitation[]      @relation("InvitationAuthor")
   invitationUsed      Invitation?       @relation("InvitationUser")
   joinRequestsHandled JoinRequest[]
+  roleChanges         RoleChange[]      @relation("RoleChangeTarget")
+  roleChangesMade     RoleChange[]      @relation("RoleChangeAuthor")
+  settingsChanged     AppSettings[]
 
   @@map("users")
 }
@@ -115,34 +134,54 @@ model Session {
 }
 
 model Plan {
-  id              String       @id @default(uuid()) @db.Uuid
-  name            String
-  description     String?
-  amountCents     Int          @map("amount_cents")
-  currency        String       @default("eur")
-  interval        PlanInterval
-  stripeProductId String?      @unique @map("stripe_product_id")
-  stripePriceId   String?      @unique @map("stripe_price_id")
-  active          Boolean      @default(true)
-  sortOrder       Int          @default(0) @map("sort_order")
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
+  id                  String   @id @default(uuid()) @db.Uuid
+  name                String
+  description         String?
+  currency            String   @default("eur")
+  // One Stripe product per mode; each frequency is a price under it.
+  stripeTestProductId String?  @unique @map("stripe_test_product_id")
+  stripeLiveProductId String?  @unique @map("stripe_live_product_id")
+  active              Boolean  @default(true)
+  sortOrder           Int      @default(0) @map("sort_order")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   subscriptions Subscription[]
+  prices        PlanPrice[]
 
   @@map("plans")
 }
 
+// One row per frequency a cotisation offers (docs/billing.md, Frequencies).
+model PlanPrice {
+  id                String       @id @default(uuid()) @db.Uuid
+  planId            String       @map("plan_id") @db.Uuid
+  frequency         PlanInterval
+  amountCents       Int          @map("amount_cents")
+  active            Boolean      @default(true)
+  stripeTestPriceId String?      @unique @map("stripe_test_price_id")
+  stripeLivePriceId String?      @unique @map("stripe_live_price_id")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, frequency])
+  @@map("plan_prices")
+}
+
 model Subscription {
-  id                   String    @id @default(uuid()) @db.Uuid
-  userId               String    @map("user_id") @db.Uuid
-  planId               String?   @map("plan_id") @db.Uuid
-  stripeSubscriptionId String    @unique @map("stripe_subscription_id")
+  id                   String        @id @default(uuid()) @db.Uuid
+  userId               String        @map("user_id") @db.Uuid
+  planId               String?       @map("plan_id") @db.Uuid
+  stripeSubscriptionId String        @unique @map("stripe_subscription_id")
   status               String
-  currentPeriodEnd     DateTime? @map("current_period_end")
-  cancelAtPeriodEnd    Boolean   @default(false) @map("cancel_at_period_end")
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
+  currentPeriodEnd     DateTime?     @map("current_period_end")
+  cancelAtPeriodEnd    Boolean       @default(false) @map("cancel_at_period_end")
+  frequency            PlanInterval?
+  livemode             Boolean       @default(false)
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
 
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan Plan? @relation(fields: [planId], references: [id], onDelete: SetNull)
@@ -159,6 +198,7 @@ model Payment {
   currency        String        @default("eur")
   status          PaymentStatus
   paidAt          DateTime?     @map("paid_at")
+  livemode        Boolean       @default(false)
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
@@ -192,17 +232,21 @@ model PaymentReminder {
 }
 
 model Document {
-  id           String           @id @default(uuid()) @db.Uuid
-  ownerId      String?          @map("owner_id") @db.Uuid
+  id           String            @id @default(uuid()) @db.Uuid
+  ownerId      String?           @map("owner_id") @db.Uuid
   category     DocumentCategory
   title        String
-  storageKey   String           @unique @map("storage_key")
-  mimeType     String           @map("mime_type")
-  sizeBytes    Int              @map("size_bytes")
-  validUntil   DateTime?        @map("valid_until") @db.Date
-  uploadedById String?          @map("uploaded_by_id") @db.Uuid
-  createdAt    DateTime         @default(now()) @map("created_at")
-  updatedAt    DateTime         @updatedAt @map("updated_at")
+  storageKey   String            @unique @map("storage_key")
+  mimeType     String            @map("mime_type")
+  sizeBytes    Int               @map("size_bytes")
+  validUntil   DateTime?         @map("valid_until") @db.Date
+  // Dojo documents only (owner_id null): member documents are never published.
+  placement    DocumentPlacement @default(PRIVATE)
+  description  String?
+  publishedAt  DateTime?         @map("published_at")
+  uploadedById String?           @map("uploaded_by_id") @db.Uuid
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
 
   owner      User? @relation("DocumentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   uploadedBy User? @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
@@ -298,4 +342,31 @@ model Invitation {
 
   @@index([email])
   @@map("invitations")
+}
+
+model RoleChange {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  changedById String?  @map("changed_by_id") @db.Uuid
+  fromRole    Role     @map("from_role")
+  toRole      Role     @map("to_role")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User  @relation("RoleChangeTarget", fields: [userId], references: [id], onDelete: Cascade)
+  changedBy User? @relation("RoleChangeAuthor", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("role_changes")
+}
+
+// A single row (id 1): settings an admin switches at runtime.
+model AppSettings {
+  id          Int      @id @default(1)
+  stripeLive  Boolean  @default(false) @map("stripe_live")
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("app_settings")
 }

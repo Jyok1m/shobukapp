@@ -17,7 +17,7 @@ export function reminderMessage(result: ReminderResult, name: string): string {
     : "Relance enregistrée (e-mail non envoyé : aucun serveur d'envoi configuré)";
 }
 
-/* POST /admin/members/:id/reminders: a French e-mail with a link to /abonnement, plus a history row. */
+/* POST /admin/members/:id/reminders: a French e-mail with a link to /cotisation, plus a history row. */
 export function ReminderDialog({
   target,
   onClose,
@@ -55,7 +55,7 @@ export function ReminderDialog({
     <Dialog
       open={target !== null}
       title={target ? `Relancer ${target.name}` : "Relancer"}
-      description="Un e-mail rappelle que la cotisation n'est pas à jour, avec un lien vers la page « Mon abonnement ». La relance est conservée dans l'historique du membre."
+      description="Un e-mail rappelle que la cotisation n'est pas à jour, avec un lien vers la page « Ma cotisation ». La relance est conservée dans l'historique du membre."
       dismissible={!pending}
       onClose={close}
     >

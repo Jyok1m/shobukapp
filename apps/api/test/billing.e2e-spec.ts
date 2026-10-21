@@ -25,7 +25,8 @@ describe('Billing (e2e)', () => {
   beforeAll(async () => {
     process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET;
     // CI has no Stripe key: signature checks need a client, never the network.
-    process.env.STRIPE_SECRET_KEY ||= 'sk_test_ci_placeholder';
+    process.env.STRIPE_TEST_SECRET_KEY ||= 'sk_test_ci_placeholder';
+    process.env.STRIPE_TEST_WEBHOOK_SECRET = WEBHOOK_SECRET;
     app = await createTestApp();
     prisma = app.get(PrismaService);
   });
@@ -35,14 +36,22 @@ describe('Billing (e2e)', () => {
     await app.close();
   });
 
+  it('rejects a checkout without a valid frequency', async () => {
+    const { cookie } = await registerUser(app);
+    await request(app.getHttpServer())
+      .post('/billing/checkout')
+      .set('Cookie', cookie)
+      .send({ planId: randomUUID(), frequency: 'WEEK' })
+      .expect(400);
+  });
+
   it('serves the plans publicly, without Stripe identifiers', async () => {
     const res = await request(app.getHttpServer())
       .get('/billing/plans')
       .expect(200);
     for (const plan of res.body as Record<string, unknown>[]) {
-      expect(plan).not.toHaveProperty('stripePriceId');
-      expect(plan).not.toHaveProperty('stripeProductId');
-      expect(plan).toHaveProperty('purchasable');
+      expect(JSON.stringify(plan)).not.toMatch(/stripe/i);
+      expect(plan).toHaveProperty('prices.0.purchasable');
     }
   });
 
@@ -77,12 +86,37 @@ describe('Billing (e2e)', () => {
     await request(server)
       .post('/admin/plans')
       .set('Cookie', admin.cookie)
-      .send({ name: 'Trop bas', amountCents: 10, interval: 'YEAR' })
+      .send({
+        name: 'Trop bas',
+        prices: [{ frequency: 'YEAR', amountCents: 10, active: true }],
+      })
       .expect(400);
     await request(server)
       .post('/admin/plans')
       .set('Cookie', admin.cookie)
-      .send({ name: 'Intervalle', amountCents: 1000, interval: 'WEEK' })
+      .send({
+        name: 'Intervalle',
+        prices: [{ frequency: 'WEEK', amountCents: 1000, active: true }],
+      })
+      .expect(400);
+    await request(server)
+      .post('/admin/plans')
+      .set('Cookie', admin.cookie)
+      .send({
+        name: 'Doublon',
+        prices: [
+          { frequency: 'YEAR', amountCents: 1000, active: true },
+          { frequency: 'YEAR', amountCents: 2000, active: true },
+        ],
+      })
+      .expect(400);
+    await request(server)
+      .post('/admin/plans')
+      .set('Cookie', admin.cookie)
+      .send({
+        name: 'Rien de propose',
+        prices: [{ frequency: 'MONTH', amountCents: 1000, active: false }],
+      })
       .expect(400);
     await request(server)
       .patch(`/admin/plans/${randomUUID()}`)
@@ -112,7 +146,7 @@ describe('Billing (e2e)', () => {
     const customerId = `cus_e2e_${randomUUID()}`;
     await prisma.user.update({
       where: { id: userId },
-      data: { stripeCustomerId: customerId },
+      data: { stripeTestCustomerId: customerId },
     });
     const invoiceId = `in_e2e_${randomUUID()}`;
     const eventId = `evt_e2e_${randomUUID()}`;
@@ -130,6 +164,7 @@ describe('Billing (e2e)', () => {
           currency: 'eur',
           status_transitions: { paid_at: 1_760_000_000 },
           parent: null,
+          livemode: false,
         },
       },
     });

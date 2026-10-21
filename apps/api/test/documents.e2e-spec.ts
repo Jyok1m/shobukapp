@@ -182,7 +182,7 @@ describe('Documents and licences (e2e)', () => {
       .set('Cookie', admin.cookie)
       .field('userId', member.id)
       .field('season', '2026-2027')
-      .field('number', 'FFK-001')
+      .field('number', 'FFJDA-001')
       .attach('file', PDF, {
         filename: 'licence.pdf',
         contentType: 'application/pdf',
@@ -193,7 +193,7 @@ describe('Documents and licences (e2e)', () => {
       .set('Cookie', admin.cookie)
       .field('userId', member.id)
       .field('season', '2026-2027')
-      .field('number', 'FFK-002')
+      .field('number', 'FFJDA-002')
       .attach('file', PDF, {
         filename: 'licence.pdf',
         contentType: 'application/pdf',
@@ -210,7 +210,7 @@ describe('Documents and licences (e2e)', () => {
       expect.objectContaining({
         id,
         season: '2026-2027',
-        number: 'FFK-002',
+        number: 'FFJDA-002',
         hasFile: true,
       }),
     ]);
@@ -222,5 +222,116 @@ describe('Documents and licences (e2e)', () => {
       .get(`/licenses/${id}/file`)
       .set('Cookie', other.cookie)
       .expect(404);
+  });
+});
+
+describe('Dojo board (e2e)', () => {
+  let app: NestExpressApplication;
+  let prisma: PrismaService;
+
+  beforeAll(async () => {
+    app = await createTestApp();
+    prisma = app.get(PrismaService);
+  });
+
+  afterAll(async () => {
+    await prisma.document.deleteMany({
+      where: { ownerId: null, title: { startsWith: 'e2e board' } },
+    });
+    await cleanupTestUsers(app);
+    await app.close();
+  });
+
+  it('shows published dojo documents to members, read-only, and never a member document', async () => {
+    const admin = await registerUser(app);
+    await prisma.user.update({
+      where: { id: admin.id },
+      data: { role: 'ADMIN' },
+    });
+    const member = await registerUser(app);
+    const server = app.getHttpServer();
+
+    const upload = (title: string, placement: string) =>
+      request(server)
+        .post('/admin/documents')
+        .set('Cookie', admin.cookie)
+        .field('title', title)
+        .field('category', 'RULES')
+        .field('placement', placement)
+        .field('description', 'À lire avant le premier keiko.')
+        .attach('file', PDF, {
+          filename: 'r.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+    const important = (await upload('e2e board règlement', 'IMPORTANT'))
+      .body as { id: string; publishedAt: string };
+    expect(important.publishedAt).toBeTruthy();
+    const hidden = (await upload('e2e board compta', 'PRIVATE')).body as {
+      id: string;
+    };
+
+    const board = await request(server)
+      .get('/documents/board')
+      .set('Cookie', member.cookie)
+      .expect(200);
+    const ids = (
+      board.body as {
+        important: { id: string }[];
+        announcements: { id: string }[];
+      }
+    ).important.map((d) => d.id);
+    expect(ids).toContain(important.id);
+    expect(ids).not.toContain(hidden.id);
+
+    await request(server)
+      .get(`/documents/${important.id}/file`)
+      .set('Cookie', member.cookie)
+      .expect(200);
+    await request(server)
+      .get(`/documents/${hidden.id}/file`)
+      .set('Cookie', member.cookie)
+      .expect(404);
+    await request(server)
+      .delete(`/documents/${important.id}`)
+      .set('Cookie', member.cookie)
+      .expect(404);
+    await request(server)
+      .patch(`/documents/${important.id}`)
+      .set('Cookie', member.cookie)
+      .send({ placement: 'PRIVATE' })
+      .expect(404);
+
+    await request(server)
+      .patch(`/documents/${important.id}`)
+      .set('Cookie', admin.cookie)
+      .send({ placement: 'ANNOUNCEMENT' })
+      .expect(200);
+    const moved = await request(server)
+      .get('/documents/board')
+      .set('Cookie', member.cookie)
+      .expect(200);
+    expect(
+      (moved.body as { announcements: { id: string }[] }).announcements.map(
+        (d) => d.id,
+      ),
+    ).toContain(important.id);
+
+    const certificate = await request(server)
+      .post('/documents')
+      .set('Cookie', member.cookie)
+      .field('title', 'Certificat')
+      .field('category', 'MEDICAL_CERTIFICATE')
+      .field('validUntil', '2027-09-01')
+      .attach('file', PDF, {
+        filename: 'c.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(201);
+    await request(server)
+      .patch(`/documents/${(certificate.body as { id: string }).id}`)
+      .set('Cookie', admin.cookie)
+      .send({ placement: 'IMPORTANT' })
+      .expect(400);
   });
 });

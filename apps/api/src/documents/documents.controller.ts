@@ -54,6 +54,12 @@ export class DocumentsController {
     return this.documents.listMine(user.id);
   }
 
+  // Declared before :id routes.
+  @Get('board')
+  board() {
+    return this.documents.board();
+  }
+
   @Post()
   @UseInterceptors(upload)
   create(

@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { PlanCard, PlanGrid } from "@/components/billing/plan-card";
+import { PlanCard, PlanGrid, PriceList } from "@/components/billing/plan-card";
+import { DojoContact } from "@/components/dojo-contact";
+import { Logo } from "@/components/logo";
+import { DojoSiteLink } from "@/components/dojo-site-link";
+import { DOJO } from "@/lib/dojo";
 import { buttonClasses } from "@/components/ui/button";
 import { publicApiGet } from "@/lib/api";
 import type { PublicPlan } from "@/lib/types";
@@ -20,15 +24,12 @@ async function Plans() {
   return (
     <PlanGrid>
       {plans.map((plan) => (
-        <PlanCard
-          key={plan.id}
-          plan={plan}
-          action={
-            <Link href="/nous-rejoindre" className={buttonClasses("primary", "md", "w-full")}>
-              Nous rejoindre
-            </Link>
-          }
-        />
+        <PlanCard key={plan.id} plan={plan}>
+          <PriceList plan={plan} />
+          <Link href="/nous-rejoindre" className={buttonClasses("primary", "md", "w-full")}>
+            Nous rejoindre
+          </Link>
+        </PlanCard>
       ))}
     </PlanGrid>
   );
@@ -39,8 +40,10 @@ export default function HomePage() {
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-16 px-4 py-16 sm:px-6">
       <section className="flex max-w-3xl flex-col gap-8">
         <div className="flex flex-col gap-4">
+          <Logo className="h-20 w-auto self-start text-accent sm:h-24" />
           <p className="text-sm font-medium tracking-widest text-accent uppercase">Espace membres</p>
-          <h1 className="font-serif text-4xl font-bold text-ink sm:text-5xl">Shobukan Dojo</h1>
+          <h1 className="font-serif text-4xl font-bold text-ink sm:text-5xl">Shobukan Hombu Dojo</h1>
+          <p className="text-sm font-medium text-ink">{DOJO.disciplines}</p>
           <p className="max-w-xl text-lg text-muted">
             Votre adhésion, vos documents, vos licences et les autres pratiquants du dojo, réunis au même
             endroit. Écrivez-nous pour découvrir le dojo, puis choisissez votre formule et gardez votre dossier à jour.
@@ -54,6 +57,9 @@ export default function HomePage() {
             Connexion
           </Link>
         </div>
+        <div>
+          <DojoSiteLink className="min-h-11 text-sm font-medium text-accent hover:underline sm:min-h-0" />
+        </div>
       </section>
 
       <section className="flex flex-col gap-6" aria-labelledby="plans-title">
@@ -66,6 +72,16 @@ export default function HomePage() {
         <Suspense fallback={<p className="text-sm text-muted">Chargement des formules…</p>}>
           <Plans />
         </Suspense>
+        <p className="text-xs text-muted">
+          En plus de la cotisation : le droit d&apos;entrée annuel et la licence-assurance FFJDA, réglés auprès du dojo.
+        </p>
+      </section>
+
+      <section className="flex flex-col gap-4" aria-labelledby="contact-title">
+        <h2 id="contact-title" className="font-serif text-2xl font-bold text-ink">
+          Nous trouver
+        </h2>
+        <DojoContact className="text-sm text-muted" />
       </section>
     </div>
   );

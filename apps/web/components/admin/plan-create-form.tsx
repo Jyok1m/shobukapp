@@ -30,9 +30,8 @@ export function PlanCreateForm() {
     const result = await apiRequest<AdminPlan>("POST", "/admin/plans", {
       name: values.name,
       ...(values.description && { description: values.description }),
-      amountCents: values.amountCents,
-      interval: values.interval,
       sortOrder: values.sortOrder,
+      prices: values.prices,
     });
     setPending(false);
     if (!result.ok) return setError(result.error);
@@ -52,7 +51,7 @@ export function PlanCreateForm() {
         {created && (
           <Notice tone="success">
             Formule « {created.name} » créée
-            {created.stripePriceId ? " et synchronisée avec Stripe." : ". Elle n'est pas encore synchronisée avec Stripe."}
+            {created.synced ? " et synchronisée avec Stripe." : ". Elle n'est pas encore synchronisée avec Stripe."}
           </Notice>
         )}
         <Button type="submit" loading={pending} className="self-start">

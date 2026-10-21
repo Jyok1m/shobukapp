@@ -1,15 +1,22 @@
 import type { BadgeTone } from "@/components/ui/badge";
 import type { ApiResult } from "./client-api";
-import type { DocumentCategory } from "./types";
+import type { DocumentCategory, Placement } from "./types";
 
 /* Same limits as the API (docs/documents.md). The API checks the magic bytes again. */
 export const DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
 export const DOCUMENT_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp";
 const ACCEPTED_TYPES = DOCUMENT_ACCEPT.split(",");
 
+export const placementLabels: Record<Placement, { label: string; tone: BadgeTone; option: string }> = {
+  PRIVATE: { label: "Privé", tone: "neutral", option: "Privé (administrateurs seulement)" },
+  ANNOUNCEMENT: { label: "Panneau d'annonces", tone: "accent", option: "Panneau d'annonces" },
+  IMPORTANT: { label: "Documents importants", tone: "success", option: "Documents importants" },
+};
+
 export const categoryLabels: Record<DocumentCategory, string> = {
   MEDICAL_CERTIFICATE: "Certificat médical",
   LEGAL: "Juridique",
+  RULES: "Règlement",
   ACCOUNTING: "Comptabilité",
   OTHER: "Autre",
 };
@@ -62,7 +69,7 @@ export function certificateState(certificate: { validUntil: string | null } | nu
   return { label: `Valide jusqu'au ${formatCalendarDate(certificate.validUntil)}`, tone: "success" };
 }
 
-/* FFK seasons run September to August. */
+/* FFJDA seasons run September to August. */
 export function currentSeason(): string {
   const [year, month] = todayInParis().split("-").map(Number);
   return month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;

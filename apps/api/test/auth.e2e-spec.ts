@@ -42,7 +42,8 @@ describe('Auth (e2e)', () => {
       role: 'PRACTITIONER',
       firstName: 'Aiko',
     });
-    expect(JSON.stringify(res.body)).not.toMatch(/password/i);
+    expect(res.body).not.toHaveProperty('passwordHash');
+    expect(JSON.stringify(res.body)).not.toMatch(/argon2/);
     const cookie = res.get('Set-Cookie')?.[0] ?? '';
     expect(cookie).toMatch(/^shobukapp_session=/);
     expect(cookie).toMatch(/HttpOnly/);

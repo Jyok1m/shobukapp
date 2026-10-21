@@ -25,6 +25,9 @@ const documentSelect = {
   mimeType: true,
   sizeBytes: true,
   validUntil: true,
+  placement: true,
+  description: true,
+  publishedAt: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.DocumentSelect;
@@ -93,6 +96,22 @@ export class DocumentsService {
     });
   }
 
+  /*
+   * The dojo's published documents, for every signed-in member: the
+   * announcement board and the important documents (docs/documents.md).
+   */
+  async board() {
+    const rows = await this.prisma.document.findMany({
+      where: { ownerId: null, placement: { not: 'PRIVATE' } },
+      orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+      select: documentSelect,
+    });
+    return {
+      announcements: rows.filter((d) => d.placement === 'ANNOUNCEMENT'),
+      important: rows.filter((d) => d.placement === 'IMPORTANT'),
+    };
+  }
+
   createForMember(
     user: SelfUser,
     dto: CreateMemberDocumentDto,
@@ -110,7 +129,13 @@ export class DocumentsService {
   }
 
   async update(viewer: SelfUser, id: string, dto: UpdateDocumentDto) {
-    await this.findAccessible(viewer, id);
+    const doc = await this.findAccessible(viewer, id, 'write');
+    const publishing =
+      dto.placement !== undefined || dto.description !== undefined;
+    if (publishing && (doc.ownerId !== null || viewer.role !== 'ADMIN')) {
+      // A member's document (a medical certificate) is never published.
+      throw new BadRequestException({ code: 'not_publishable' });
+    }
     return this.prisma.document.update({
       where: { id },
       data: {
@@ -118,19 +143,29 @@ export class DocumentsService {
         ...(dto.validUntil !== undefined && {
           validUntil: toDate(dto.validUntil),
         }),
+        ...(dto.description !== undefined && { description: dto.description }),
+        ...(dto.placement !== undefined && {
+          placement: dto.placement,
+          publishedAt:
+            dto.placement === 'PRIVATE'
+              ? null
+              : doc.placement === 'PRIVATE'
+                ? new Date()
+                : doc.publishedAt,
+        }),
       },
       select: documentSelect,
     });
   }
 
   async remove(viewer: SelfUser, id: string): Promise<void> {
-    const doc = await this.findAccessible(viewer, id);
+    const doc = await this.findAccessible(viewer, id, 'write');
     await this.prisma.document.delete({ where: { id } });
     await this.storage.remove(doc.storageKey);
   }
 
   async file(viewer: SelfUser, id: string): Promise<DownloadableFile> {
-    const doc = await this.findAccessible(viewer, id);
+    const doc = await this.findAccessible(viewer, id, 'read');
     return {
       stream: await this.storage.get(doc.storageKey),
       mimeType: doc.mimeType,
@@ -225,7 +260,7 @@ export class DocumentsService {
     return {
       stream: Readable.from(buffer),
       mimeType,
-      filename: safeFilename(`licence-ffk-${license.season}`, mimeType),
+      filename: safeFilename(`licence-ffjda-${license.season}`, mimeType),
     };
   }
 
@@ -247,6 +282,15 @@ export class DocumentsService {
           category: dto.category,
           title: dto.title,
           validUntil: toDate(dto.validUntil) ?? null,
+          ...('placement' in dto &&
+            ownerId === null && {
+              placement: dto.placement ?? 'PRIVATE',
+              description: dto.description ?? null,
+              publishedAt:
+                dto.placement && dto.placement !== 'PRIVATE'
+                  ? new Date()
+                  : null,
+            }),
           storageKey: key,
           mimeType,
           sizeBytes: file.size,
@@ -278,12 +322,20 @@ export class DocumentsService {
    * Member documents: owner or admin. Dojo documents (no owner): admins only.
    * Anything else is reported as missing, so ids do not reveal existence.
    */
-  private async findAccessible(viewer: SelfUser, id: string) {
+  private async findAccessible(
+    viewer: SelfUser,
+    id: string,
+    access: 'read' | 'write',
+  ) {
     const doc = await this.prisma.document.findUnique({ where: { id } });
     const allowed =
       doc &&
       (viewer.role === 'ADMIN' ||
-        (doc.ownerId !== null && doc.ownerId === viewer.id));
+        (doc.ownerId !== null && doc.ownerId === viewer.id) ||
+        // A published dojo document is readable by every member, never editable.
+        (access === 'read' &&
+          doc.ownerId === null &&
+          doc.placement !== 'PRIVATE'));
     if (!allowed) throw new NotFoundException({ code: 'not_found' });
     return doc;
   }

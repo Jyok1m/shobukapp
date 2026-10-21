@@ -20,6 +20,9 @@ export type SelfUser = {
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   directoryVisible: boolean;
+  /* Set when an admin created the account: every route but /auth/me, /auth/logout and /auth/password answers 403 until changed. */
+  mustChangePassword: boolean;
+  termsAcceptedAt: string | null;
   createdAt: string;
 };
 
@@ -44,27 +47,43 @@ export type DirectoryPage = {
   nextCursor: string | null;
 };
 
-export type PlanInterval = "MONTH" | "YEAR";
+/* How often a cotisation is paid: each plan offers one to three of these (docs/billing.md, Frequencies). */
+export type Frequency = "YEAR" | "QUARTER" | "MONTH";
 
+export type PublicPlanPrice = {
+  frequency: Frequency;
+  amountCents: number;
+  purchasable: boolean;
+};
+
+/* GET /billing/plans: active plans with at least one active price, prices ordered YEAR, QUARTER, MONTH. */
 export type PublicPlan = {
   id: string;
   name: string;
   description: string | null;
-  amountCents: number;
   currency: string;
-  interval: PlanInterval;
-  purchasable: boolean;
+  prices: PublicPlanPrice[];
+};
+
+export type AdminPlanPrice = {
+  id: string;
+  frequency: Frequency;
+  amountCents: number;
+  active: boolean;
+  stripeTestPriceId: string | null;
+  stripeLivePriceId: string | null;
 };
 
 export type AdminPlan = {
   id: string;
   name: string;
   description: string | null;
-  amountCents: number;
   currency: string;
-  interval: PlanInterval;
-  stripeProductId: string | null;
-  stripePriceId: string | null;
+  prices: AdminPlanPrice[];
+  stripeTestProductId: string | null;
+  stripeLiveProductId: string | null;
+  /* Product and every active price exist in the current Stripe mode. */
+  synced: boolean;
   active: boolean;
   sortOrder: number;
   createdAt: string;
@@ -86,10 +105,16 @@ export type Payment = {
 export type Membership = {
   status: string | null;
   isMember: boolean;
+  planId: string | null;
   planName: string | null;
+  frequency: Frequency | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   manageable: boolean;
+  /* Stripe test mode: payments are simulated. */
+  testMode: boolean;
+  /* Live mode, and the member had a cotisation paid in test mode: it does not carry over. */
+  testCotisationNotCarried: boolean;
   payments: Payment[];
 };
 
@@ -108,6 +133,7 @@ export type AdminMemberListItem = {
     status: string | null;
     isMember: boolean;
     planName: string | null;
+    frequency: Frequency | null;
     currentPeriodEnd: string | null;
     cancelAtPeriodEnd: boolean;
   };
@@ -139,11 +165,35 @@ export type AdminMemberDetail = SelfUser & {
     currentPeriodEnd: string | null;
     cancelAtPeriodEnd: boolean;
     createdAt: string;
+    frequency: Frequency | null;
     plan: { name: string } | null;
   }[];
   payments: Payment[];
   remindersReceived: PaymentReminder[];
+  roleChanges: RoleChange[];
 };
+
+export type RoleChange = {
+  fromRole: Role;
+  toRole: Role;
+  createdAt: string;
+  changedBy: { firstName: string; lastName: string } | null;
+};
+
+export type StripeMode = "test" | "live";
+
+/* GET and PUT /admin/settings/billing */
+export type BillingSettings = {
+  mode: StripeMode;
+  configured: Record<StripeMode, boolean>;
+  updatedAt: string | null;
+  updatedBy: { firstName: string; lastName: string } | null;
+  /* Only after a test to live switch: members told their demo cotisation is not carried over. */
+  notified?: number;
+};
+
+/* POST /admin/members */
+export type CreatedMember = { user: SelfUser; delivery: MailDelivery };
 
 /* POST /admin/members/:id/reminders. "logged" means no SMTP server is configured. */
 export type ReminderResult = {
@@ -153,7 +203,10 @@ export type ReminderResult = {
   delivery: "sent" | "logged";
 };
 
-export type DocumentCategory = "MEDICAL_CERTIFICATE" | "LEGAL" | "ACCOUNTING" | "OTHER";
+export type DocumentCategory = "MEDICAL_CERTIFICATE" | "LEGAL" | "RULES" | "ACCOUNTING" | "OTHER";
+
+/* Where a dojo document shows: admins only, the dashboard board, or the important list. */
+export type Placement = "PRIVATE" | "ANNOUNCEMENT" | "IMPORTANT";
 
 /* A member document (ownerId set) or a dojo document (ownerId null). */
 export type MemberDocument = {
@@ -164,9 +217,22 @@ export type MemberDocument = {
   mimeType: string;
   sizeBytes: number;
   validUntil: string | null;
+  /* Dojo documents only; a member document is always PRIVATE. */
+  placement?: Placement;
+  description?: string | null;
+  publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+/* GET /documents/board: what every signed-in member sees on the dashboard. */
+export type DocumentBoard = {
+  announcements: MemberDocument[];
+  important: MemberDocument[];
+};
+
+/* POST /billing/subscription/frequency/preview */
+export type FrequencyPreview = { amountDueCents: number; creditCents: number; currency: string };
 
 export type License = {
   id: string;

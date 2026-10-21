@@ -11,7 +11,7 @@ import type { DocumentCategory, MemberDocument } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Documents du dojo" };
 
-const groups: DocumentCategory[] = ["LEGAL", "ACCOUNTING", "OTHER"];
+const groups: DocumentCategory[] = ["LEGAL", "RULES", "ACCOUNTING", "OTHER"];
 
 /* The layout redirect does not protect the page: it checks the role itself. */
 async function DojoDocuments() {
@@ -23,7 +23,8 @@ async function DojoDocuments() {
         endpoint="/admin/documents"
         categories={groups}
         title="Ajouter un document"
-        description="Visible uniquement par les administrateurs."
+        description="Privé par défaut. Publiez-le sur le panneau d'annonces ou dans les documents importants pour le montrer aux membres."
+        withPlacement
       />
       {groups.map((category) => {
         const items = documents.filter((document) => document.category === category);
@@ -38,6 +39,7 @@ async function DojoDocuments() {
               editable
               showCategory={false}
               showValidity={false}
+              withPlacement
               caption={`Documents du dojo : ${categoryLabels[category]}`}
               emptyTitle="Aucun document dans cette catégorie"
             />
@@ -53,7 +55,7 @@ export default function AdminDocumentsPage() {
     <div className="flex flex-col">
       <PageHeader
         title="Documents du dojo"
-        description="Statuts, règlement intérieur, pièces comptables et autres documents du club."
+        description="Statuts, règlement intérieur, pièces comptables et autres documents du club, à garder privés ou à publier pour les membres."
       />
       <Suspense fallback={<PageFallback />}>
         <DojoDocuments />

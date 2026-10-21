@@ -11,4 +11,5 @@
 - A counterpart is shown with first name, last name, `isAdmin` and `hasPhoto` only: never email or phone (those belong to the directory projection, for listed members).
 - Conversations are built from the 1000 most recent messages of the user: enough for a dojo, to revisit with a dedicated query if it grows.
 - The web polls every 15 seconds on the open conversation, every 30 seconds for the conversation list and every 60 seconds for the unread badge, paused while the tab is hidden. `?avec=` is used only if it is a uuid: it ends up in `/api` paths. Server-sent events or websockets are a later step, once polling shows its limits.
+- **Mail notification**: the first unread message of a conversation mails the recipient (sender's name and a link to `/messagerie?avec=<sender>`, never the body: a mailbox is less private than the app). Following messages do not, until the recipient reads the conversation. Mail failures never fail the send.
 - Messages are personal data: they are deleted with their sender's account (`privacy.md`).

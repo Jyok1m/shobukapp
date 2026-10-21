@@ -37,11 +37,13 @@ Admin routes live under `/admin/*` and carry `@Roles('ADMIN')` at the controller
 
 ```
 app/
-  (public)/            page.tsx (landing + plans), connexion/, inscription/
+  (public)/            page.tsx (landing + plans), connexion/, inscription/, nous-rejoindre/,
+                       activation/, confidentialite/
+  (first-login)/       premiere-connexion/: forced password change, minimal layout, no app API calls
   (app)/               layout.tsx checks the session, redirects to /connexion
     tableau-de-bord/   member home: membership status, next steps
     profil/
-    abonnement/
+    cotisation/         (/abonnement redirects here)
     annuaire/
     messagerie/
     documents/
@@ -61,6 +63,7 @@ Route segments are French because they are user-facing URLs; component and file 
 - `cookies()` must be read inside `<Suspense>` with cacheComponents, so the session checks live in Suspense boundaries (`ProtectedShell`). A redirect from there becomes a 200 with a meta refresh, not a 307.
 - `apps/web/proxy.ts` (the Next 16 name of middleware) adds a cheap 307 to `/connexion` when the session cookie is absent on protected paths. It only reads presence: validity is still checked through `/auth/me`. Convenience, not security.
 - `getCurrentUser()` is deduplicated per request with React `cache`, never with `use cache`: a cached user would survive a logout.
+- `mustChangePassword`: `requireUser` redirects to `/premiere-connexion`, `apiGet` turns a 403 `password_change_required` into the same redirect, `apiRequest` reloads there. The page itself only calls `/auth/me` and `/auth/password`, so there is no redirect loop.
 
 ## Configuration
 

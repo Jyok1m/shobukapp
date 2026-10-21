@@ -12,7 +12,7 @@ import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../common/request';
 import type { SelfUser } from '../common/self-user';
 import { AuthService } from './auth.service';
-import { CurrentUser, Public } from './decorators';
+import { AllowPendingPassword, CurrentUser, Public } from './decorators';
 import { ChangePasswordDto, LoginDto, RegisterDto } from './dto/auth.dto';
 import { SESSION_COOKIE, SessionService } from './session.service';
 
@@ -68,11 +68,13 @@ export class AuthController {
     this.sessions.clearCookie(res);
   }
 
+  @AllowPendingPassword()
   @Get('me')
   me(@CurrentUser() user: SelfUser): SelfUser {
     return user;
   }
 
+  @AllowPendingPassword()
   @Throttle(AUTH_THROTTLE)
   @Post('password')
   @HttpCode(204)

@@ -10,7 +10,7 @@ import { Notice } from "@/components/ui/notice";
 import { Table, Td, Th } from "@/components/ui/table";
 import { cx } from "@/lib/cx";
 import { certificateState } from "@/lib/documents";
-import { formatAmount, formatShortDate } from "@/lib/format";
+import { cotisationLabel, formatAmount, formatShortDate } from "@/lib/format";
 import type { AdminMembersPage } from "@/lib/types";
 import { fullName, type MemberQuery } from "./query";
 import { ReminderDialog, reminderMessage, type ReminderTarget } from "./reminder-dialog";
@@ -71,7 +71,9 @@ export function PayersTable({ initial, query }: { initial: AdminMembersPage; que
                   </Link>
                   <span className="block truncate text-xs text-muted">{member.email}</span>
                 </Td>
-                <Td className="min-w-32">{member.membership.planName ?? <span className="text-muted">Aucune</span>}</Td>
+                <Td className="min-w-32">{cotisationLabel(member.membership.planName, member.membership.frequency) ?? (
+                    <span className="text-muted">Aucune</span>
+                  )}</Td>
                 <Td className="whitespace-nowrap">
                   <MembershipBadge status={member.membership.status} />
                   {member.membership.cancelAtPeriodEnd && (

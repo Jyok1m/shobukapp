@@ -1,10 +1,14 @@
 import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
 import { cx } from "@/lib/cx";
 
-/* Scrolls horizontally on small screens instead of breaking the layout. */
+/*
+ * Scrolls horizontally on small screens instead of breaking the layout.
+ * `relative` keeps sr-only (absolute) cell content inside the scroller: without
+ * it, an off-screen column label widened the whole page.
+ */
 export function Table({ className, children, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+    <div className="relative overflow-x-auto rounded-lg border border-line bg-surface">
       <table className={cx("w-full text-left text-sm", className)} {...props}>
         {children}
       </table>

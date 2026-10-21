@@ -18,7 +18,7 @@ async function Licences() {
     return (
       <EmptyState
         title="Aucune licence pour l'instant"
-        description="Le dojo dépose ici votre licence FFK chaque saison, une fois votre inscription validée. Vérifiez que votre profil est complet : il sert à la demande de licence."
+        description="Le dojo dépose ici votre licence FFJDA chaque saison, une fois votre inscription validée. Vérifiez que votre profil est complet : il sert à la demande de licence."
       />
     );
   }
@@ -26,7 +26,7 @@ async function Licences() {
   return (
     <div className="max-w-3xl">
       <Table>
-        <caption className="sr-only">Mes licences FFK par saison</caption>
+        <caption className="sr-only">Mes licences FFJDA par saison</caption>
         <thead>
           <tr>
             <Th>Saison</Th>
@@ -70,7 +70,7 @@ async function Licences() {
 export default function LicencesPage() {
   return (
     <div className="flex flex-col">
-      <PageHeader title="Mes licences" description="Vos licences FFK, saison par saison, déposées par le dojo." />
+      <PageHeader title="Mes licences" description="Vos licences FFJDA, saison par saison, déposées par le dojo." />
       <Suspense fallback={<PageFallback />}>
         <Licences />
       </Suspense>

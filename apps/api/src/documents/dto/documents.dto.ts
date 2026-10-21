@@ -7,6 +7,7 @@ import {
   IsUUID,
   Length,
   Matches,
+  MaxLength,
   ValidateIf,
 } from 'class-validator';
 
@@ -17,7 +18,20 @@ const dateOrNull = ({ value }: { value: unknown }) =>
   value === '' || value === 'null' ? null : value;
 
 export const MEMBER_CATEGORIES = ['MEDICAL_CERTIFICATE', 'OTHER'] as const;
-export const DOJO_CATEGORIES = ['LEGAL', 'ACCOUNTING', 'OTHER'] as const;
+export const DOJO_CATEGORIES = [
+  'LEGAL',
+  'RULES',
+  'ACCOUNTING',
+  'OTHER',
+] as const;
+export const PLACEMENTS = ['PRIVATE', 'ANNOUNCEMENT', 'IMPORTANT'] as const;
+export type Placement = (typeof PLACEMENTS)[number];
+
+const trimOrNull = ({ value }: { value: unknown }) => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+};
 
 class DocumentFieldsDto {
   @Transform(trim)
@@ -45,12 +59,33 @@ export class CreateDojoDocumentDto extends DocumentFieldsDto {
   category!: (typeof DOJO_CATEGORIES)[number];
 
   @IsOptional()
+  @IsIn(PLACEMENTS)
+  placement?: Placement;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @IsString()
+  @MaxLength(500)
+  description?: string | null;
+
+  @IsOptional()
   @Transform(dateOrNull)
   @IsDateString({ strict: true })
   validUntil?: string | null;
 }
 
 export class UpdateDocumentDto {
+  // Dojo documents only, admins only: checked by the service.
+  @IsOptional()
+  @IsIn(PLACEMENTS)
+  placement?: Placement;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @IsString()
+  @MaxLength(500)
+  description?: string | null;
+
   @ValidateIf((_, value) => value !== undefined)
   @Transform(trim)
   @IsString()
@@ -67,7 +102,7 @@ export class UpsertLicenseDto {
   @IsUUID()
   userId!: string;
 
-  // FFK seasons run September to August: "2026-2027".
+  // FFJDA seasons run September to August: "2026-2027".
   @Matches(/^\d{4}-\d{4}$/)
   season!: string;
 

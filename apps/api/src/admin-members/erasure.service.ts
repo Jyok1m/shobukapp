@@ -26,7 +26,7 @@ export class ErasureService {
         photoKey: true,
         subscriptions: {
           where: { status: { notIn: ['canceled', 'incomplete_expired'] } },
-          select: { stripeSubscriptionId: true },
+          select: { stripeSubscriptionId: true, livemode: true },
         },
         documents: { select: { storageKey: true } },
         licenses: { select: { storageKey: true } },
@@ -34,20 +34,27 @@ export class ErasureService {
     });
     if (!user) throw new NotFoundException({ code: 'member_not_found' });
 
-    if (user.subscriptions.length) {
-      const stripe = this.stripe.require();
-      for (const { stripeSubscriptionId } of user.subscriptions) {
-        // Immediately, without proration: nobody remains to use it.
-        try {
-          await stripe.subscriptions.cancel(stripeSubscriptionId);
-        } catch (error) {
-          // Already gone at Stripe (a previous partial erasure): nothing to stop.
-          if (
-            !(error instanceof Stripe.errors.StripeError) ||
-            error.code !== 'resource_missing'
-          ) {
-            throw error;
-          }
+    for (const { stripeSubscriptionId, livemode } of user.subscriptions) {
+      const client = this.stripe.client(livemode ? 'live' : 'test');
+      if (!client) {
+        // A live subscription must be stopped or the person keeps paying; a
+        // test one costs nobody anything.
+        if (livemode) this.stripe.require('live');
+        this.logger.warn(
+          `Test subscription ${stripeSubscriptionId} left as is`,
+        );
+        continue;
+      }
+      // Immediately, without proration: nobody remains to use it.
+      try {
+        await client.subscriptions.cancel(stripeSubscriptionId);
+      } catch (error) {
+        // Already gone at Stripe (a previous partial erasure): nothing to stop.
+        if (
+          !(error instanceof Stripe.errors.StripeError) ||
+          error.code !== 'resource_missing'
+        ) {
+          throw error;
         }
       }
     }

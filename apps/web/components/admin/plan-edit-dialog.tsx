@@ -33,11 +33,11 @@ function PlanEditForm({ plan, onClose, onSaved }: { plan: AdminPlan; onClose: ()
   const [errors, setErrors] = useState<PlanFieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const synced = Boolean(plan.stripeProductId && plan.stripePriceId);
+  const synced = plan.synced;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const { values, errors: fieldErrors } = readPlanForm(new FormData(event.currentTarget));
+    const { values, errors: fieldErrors } = readPlanForm(new FormData(event.currentTarget), plan);
     setErrors(fieldErrors);
     setError(null);
     if (Object.keys(fieldErrors).length > 0) return;
@@ -46,8 +46,12 @@ function PlanEditForm({ plan, onClose, onSaved }: { plan: AdminPlan; onClose: ()
     const changes: Record<string, unknown> = {};
     if (values.name !== plan.name) changes.name = values.name;
     if (values.description !== (plan.description ?? "")) changes.description = values.description;
-    if (values.amountCents !== plan.amountCents) changes.amountCents = values.amountCents;
-    if (values.interval !== plan.interval) changes.interval = values.interval;
+    // Only the frequencies whose amount or offer changed: the API leaves the others untouched.
+    const prices = values.prices.filter((price) => {
+      const current = plan.prices.find((item) => item.frequency === price.frequency);
+      return !current || current.amountCents !== price.amountCents || current.active !== price.active;
+    });
+    if (prices.length > 0) changes.prices = prices;
     if (values.sortOrder !== plan.sortOrder) changes.sortOrder = values.sortOrder;
 
     if (Object.keys(changes).length === 0 && synced) return onClose();
@@ -62,9 +66,9 @@ function PlanEditForm({ plan, onClose, onSaved }: { plan: AdminPlan; onClose: ()
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       <Notice>
-        Modifier le montant ou la périodicité crée un nouveau prix dans Stripe. Les abonnés actuels conservent
-        l&apos;ancien tarif jusqu&apos;à ce qu&apos;ils changent de formule ; seuls les nouveaux abonnements
-        utilisent le nouveau.
+        Un nouveau montant ne s&apos;applique qu&apos;aux nouveaux paiements : il crée un nouveau prix dans Stripe, et
+        les pratiquants qui cotisent déjà conservent l&apos;ancien tarif jusqu&apos;à ce qu&apos;ils changent de
+        formule ou de fréquence.
       </Notice>
       {!synced && (
         <Notice tone="danger">

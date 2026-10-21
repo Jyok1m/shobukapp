@@ -188,7 +188,7 @@ describe('Admin members (e2e)', () => {
       .set('Cookie', admin.cookie)
       .field('userId', member.id)
       .field('season', '2026-2027')
-      .field('number', 'FFK-ERASE')
+      .field('number', 'FFJDA-ERASE')
       .attach('file', PDF, {
         filename: 'l.pdf',
         contentType: 'application/pdf',

@@ -11,17 +11,28 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { CurrentUser, Roles } from '../auth/decorators';
 import type { SelfUser } from '../common/self-user';
 import { UpdateProfileDto } from '../users/dto/profile.dto';
 import { AdminMembersService } from './admin-members.service';
-import { ListMembersQuery, ReminderDto } from './dto/admin-members.dto';
+import {
+  ChangeRoleDto,
+  CreateMemberDto,
+  ListMembersQuery,
+  ReminderDto,
+} from './dto/admin-members.dto';
 
 @Controller('admin/members')
 @Roles('ADMIN')
 export class AdminMembersController {
   constructor(private readonly members: AdminMembersService) {}
+
+  @Post()
+  create(@CurrentUser() admin: SelfUser, @Body() dto: CreateMemberDto) {
+    return this.members.createMember(admin, dto);
+  }
 
   @Get()
   list(@Query() query: ListMembersQuery) {
@@ -65,6 +76,16 @@ export class AdminMembersController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
     return this.members.remove(admin.id, id);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Patch(':id/role')
+  changeRole(
+    @CurrentUser() admin: SelfUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ChangeRoleDto,
+  ) {
+    return this.members.changeRole(admin, id, dto.role, dto.password);
   }
 
   @Post(':id/reminders')

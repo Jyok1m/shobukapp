@@ -43,7 +43,7 @@ export function Dialog({ open, title, description, dismissible = true, onClose, 
         if (event.target === event.currentTarget && dismissible) onClose();
       }}
       className={cx(
-        "m-auto max-h-11/12 w-11/12 max-w-md overflow-y-auto rounded-lg border border-line bg-surface p-0 text-ink shadow-lg backdrop:bg-ink/40",
+        "m-auto max-h-11/12 w-11/12 max-w-md overflow-y-auto rounded-lg border border-line bg-surface p-0 text-ink shadow-lg backdrop:bg-scrim/50",
         className,
       )}
     >

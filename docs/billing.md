@@ -2,9 +2,34 @@
 
 Stripe holds prices, cards, invoices and retries. The database holds a mirror good enough to list, filter and decide access.
 
+## The dojo's grid (2026/2027)
+
+Cotisations are per number of weekly units (1 unité = 1 discipline once a week): adults 1, 2, 3 units or unlimited, quarterly or yearly; children (up to 14) 1 or 2 units, quarterly only. The seed reproduces it. Not handled online yet: the annual entrance fee (60 € adult, 45 € child), the FFJDA licence and insurance (56 €), the sports passport (10 €, valid 8 years), private lessons and drop-in classes; the landing says they are paid at the dojo.
+
+## Frequencies
+
+A cotisation (a plan, "Adulte", "Étudiant") can be paid **yearly, quarterly or monthly**. Each frequency it offers is a row of `plan_prices` with its own amount, chosen freely by the admin (a discount on the yearly one is just a lower amount), and its own Stripe price per mode. The member picks the cotisation, then the frequency, at checkout (`POST /billing/checkout {planId, frequency}`).
+
+- Stripe has no quarterly interval: `QUARTER` is a price with `recurring: {interval: 'month', interval_count: 3}`. `frequencyOf()` reads a Stripe price back into a frequency.
+- One Stripe product per plan and mode, one price per frequency under it.
+- A plan must offer at least one frequency (`no_frequency_offered`); a frequency appears once per plan (`duplicate_frequency`). `PATCH /admin/plans/:id {prices: [...]}` creates or updates the listed frequencies and leaves the others untouched.
+- A frequency whose amount changes gets a new Stripe price, the old one deactivated. Changed while not offered, its price is dropped and recreated when offered again: an old amount must never come back.
+- `subscriptions.frequency` is copied from the Stripe price at each sync.
+
+## Changing frequency
+
+`POST /billing/subscription/frequency/preview {frequency}` returns the amount due now; `POST /billing/subscription/frequency {frequency}` applies it. Same cotisation, another of its offered prices; only for an `active` or `trialing` cotisation of the current mode (`no_active_cotisation`, `same_frequency`, `frequency_not_offered`).
+
+- `proration_behavior: always_invoice`: Stripe invoices the difference at once and credits the unused time (monthly 25 € to yearly 240 € costs 215 € today; checked against Stripe test mode). An interval change also restarts the billing period.
+- `payment_behavior: pending_if_incomplete`: the change only applies once that invoice is paid. **A declined card does not throw**: Stripe answers 200 with `pending_update` and keeps the old price (checked in test mode with `pm_card_chargeCustomerFail`). The API then voids the open invoice (otherwise paying it later would apply the change by surprise; voiding also clears the pending update) and answers 402 `payment_declined`.
+- Idempotency key on the update: subscription, old price, new price and current period start. Two tabs or a retry send one update; going back and forth in a later period is a new request.
+- The subscription is re-synced right away; the webhook confirms it.
+- When the unused time is worth more than the new price (yearly to quarterly), nothing is due and the rest stays as a credit on the Stripe customer, deducted from the next payments: the preview returns it as `creditCents`.
+- Migration `plan_frequencies` turned each existing plan into one price row at its former interval, Stripe ids included.
+
 ## Plans (admin CRUD)
 
-- A plan row maps to one Stripe product and one active Stripe price.
+- A plan row maps to one Stripe product per mode, and each of its frequencies to one active Stripe price (see Frequencies).
 - Create: Stripe product, then Stripe price, then the row. Stripe first: an orphan product is harmless and visible in the Stripe dashboard, a row pointing to a nonexistent price breaks a payment. Calls carry an idempotency key.
 - **A Stripe price is immutable.** Changing the amount or interval creates a new price, points the plan to it and deactivates the old one. Current subscribers keep the old price until they change plan: Stripe does not migrate existing subscriptions.
 - Changing name or description updates the product.
@@ -17,7 +42,7 @@ Stripe holds prices, cards, invoices and retries. The database holds a mirror go
 
 - `GET /billing/plans` is public: the plans page shows before signup.
 - `POST /billing/checkout { planId }` refuses with `already_subscribed` if a subscription is live or late, checked in our table **and at Stripe** (our table only fills on webhook: two tabs could otherwise open two subscriptions). Then it creates a Checkout Session in `subscription` mode for the user's Stripe customer (created on first need, id stored on `users`). Returns the URL, the browser redirects.
-- `POST /billing/portal` returns a Customer Portal URL: card, invoices, cancellation. No card form on our side, which keeps us out of PCI scope.
+- `POST /billing/portal` returns a Customer Portal URL: card, invoices, cancellation. No card form on our side, which keeps us out of PCI scope. `manageable` (the button) is true once the member has a subscription or a payment in the current mode: a former member still reads their invoices, someone who only abandoned a checkout has nothing to manage.
 - Success and cancel URLs are built server-side from `WEB_URL`, never received from the browser (open redirect).
 
 ## Webhook
@@ -41,7 +66,7 @@ Stripe holds prices, cards, invoices and retries. The database holds a mirror go
 
 ## Payment reminders ("Relancer")
 
-- `POST /admin/members/:id/reminders { note? }` sends a French email to the practitioner with a link to `/abonnement`, and writes a `payment_reminders` row (author, date, note).
+- `POST /admin/members/:id/reminders { note? }` sends a French email to the practitioner with a link to `/cotisation`, and writes a `payment_reminders` row (author, date, note).
 - Without `SMTP_HOST`, the email is logged instead of sent and the row is still written: the demo works without a mail provider.
 - Stripe's own dunning emails (Settings, Billing, Subscriptions and emails) complement this; enable them in the Stripe dashboard rather than reimplementing retries.
 
@@ -49,8 +74,21 @@ Stripe holds prices, cards, invoices and retries. The database holds a mirror go
 
 A `StripeError` is caught by `StripeErrorFilter`: logged, answered as 502 `{ code: 'stripe_error' }`. Stripe messages describe our integration, not what the user did, and must not reach the browser.
 
+## Modes (test and live)
+
+Production carries two Stripe key pairs (`STRIPE_TEST_*`, `STRIPE_LIVE_*`); an admin switches the serving mode in the dashboard (`GET/PUT /admin/settings/billing`, password re-entered). This lets the dojo open signups and demo payments in test mode before the Stripe account is live, then go live without a deploy.
+
+- **Every Stripe object belongs to one mode.** Plans carry `stripe_test_*` and `stripe_live_*` product and price ids, users a customer id per mode, subscriptions and payments a `livemode` flag copied from Stripe. Test and live objects never cross.
+- **Only the current mode counts**: membership, payment history, admin lists and the export read the subscriptions and payments of the current mode. After going live, a subscription paid with a test card makes nobody a member.
+- **Plan edits reach the current mode only.** Switching runs `syncAllForMode` first: every plan gets its product and price in the target mode as the row describes it now (amount, interval, name, archived), comparing with the live price at Stripe. If Stripe refuses, the mode does not change.
+- **One webhook URL for both modes**: declare the endpoint twice in Stripe (once in test, once in live), each with its own secret. The API tries each configured secret and takes the mode from `event.livemode`.
+- **Test mode is announced everywhere money is involved**: Stripe Checkout shows a submit message (card 4242 4242 4242 4242, nothing debited, not carried over to live), and `/cotisation` shows the same notice (`testMode`).
+- **Switching to live does not carry test cotisations over**, by design: they were paid with a test card. Members holding one get a mail at the switch, and `/cotisation` tells them (`testCotisationNotCarried`). Everything else carries over: accounts, profiles, documents, licences, messages are not tied to a mode, only Stripe objects are.
+- A mode without key is unavailable (409 `stripe_mode_unavailable`). Without the current mode's key, billing answers 503 `billing_disabled`.
+- Migration `roles_and_stripe_modes` renamed the existing ids to the test columns: everything created so far came from a test key.
+
 ## Environments
 
-- `APP_ENV` decides the allowed Stripe mode: a `sk_live_` key outside `production` and a `sk_test_` key inside it stop the boot.
-- Without `STRIPE_SECRET_KEY`, billing routes answer 503 `billing_disabled` and the plans page hides purchase buttons. The rest of the app works.
-- In production, a key without `STRIPE_WEBHOOK_SECRET` stops the boot: we would sell subscriptions nothing records. In development it only disables the webhook route (503), since the secret comes from `stripe listen` once the API runs.
+- A live key outside `APP_ENV=production` stops the boot, as does a live key in the test slot or a test key in the live slot. The legacy `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` pair still works and lands in the slot its prefix names.
+- Without the current mode's key, billing routes answer 503 `billing_disabled` and the plans page hides purchase buttons. The rest of the app works.
+- In production, a key without its webhook secret stops the boot: we would sell subscriptions nothing records. In development it only disables the webhook (503), since the secret comes from `stripe listen` once the API runs.

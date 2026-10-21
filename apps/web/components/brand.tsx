@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 import { cx } from "@/lib/cx";
 
 export function Brand({ href = "/", className }: { href?: string; className?: string }) {
@@ -7,7 +8,7 @@ export function Brand({ href = "/", className }: { href?: string; className?: st
       href={href}
       className={cx("inline-flex items-center gap-2 font-serif text-lg font-bold text-ink", className)}
     >
-      <span aria-hidden className="size-2.5 rounded-full bg-accent" />
+      <Logo className="h-7 w-auto text-accent" />
       Shobukan Dojo
     </Link>
   );

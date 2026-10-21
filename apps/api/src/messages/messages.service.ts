@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { SelfUser } from '../common/self-user';
 
@@ -36,7 +38,16 @@ const messageSelect = {
 // Rules: docs/messaging.md.
 @Injectable()
 export class MessagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(MessagesService.name);
+  private readonly webUrl: string;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+    config: ConfigService,
+  ) {
+    this.webUrl = config.getOrThrow<string>('webUrl');
+  }
 
   async conversations(me: SelfUser) {
     const recent = await this.prisma.message.findMany({
@@ -130,10 +141,50 @@ export class MessagesService {
     ) {
       throw new NotFoundException({ code: 'member_not_found' });
     }
-    return this.prisma.message.create({
+    const message = await this.prisma.message.create({
       data: { senderId: me.id, recipientId, body },
       select: messageSelect,
     });
+    await this.notify(me, recipientId, message.id);
+    return message;
+  }
+
+  /*
+   * One mail per unread streak: the first message nobody has read yet in this
+   * conversation triggers it, the following ones do not, until the recipient
+   * reads them. The body never goes in the mail (docs/messaging.md).
+   */
+  private async notify(me: SelfUser, recipientId: string, messageId: string) {
+    const unreadBefore = await this.prisma.message.count({
+      where: {
+        senderId: me.id,
+        recipientId,
+        readAt: null,
+        id: { not: messageId },
+      },
+    });
+    if (unreadBefore > 0) return;
+    const recipient = await this.prisma.user.findUnique({
+      where: { id: recipientId },
+      select: { email: true, firstName: true },
+    });
+    if (!recipient) return;
+    await this.mail
+      .send({
+        to: recipient.email,
+        subject: `Shobukan Dojo : nouveau message de ${me.firstName} ${me.lastName}`,
+        text: [
+          `Bonjour ${recipient.firstName},`,
+          '',
+          `${me.firstName} ${me.lastName} vous a écrit sur l'espace du Shobukan Dojo.`,
+          `Lire le message : ${this.webUrl}/messagerie?avec=${me.id}`,
+          '',
+          "Vous ne recevrez pas d'autre e-mail pour cette conversation tant que vous n'aurez pas lu ses messages.",
+        ].join('\n'),
+      })
+      .catch((error: unknown) =>
+        this.logger.error(`Message mail failed: ${String(error)}`),
+      );
   }
 
   async markRead(me: SelfUser, otherId: string): Promise<{ updated: number }> {

@@ -1,5 +1,6 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
+import { MailService } from '../src/mail/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { cleanupTestUsers, createTestApp, registerUser } from './utils';
 
@@ -74,6 +75,35 @@ describe('Messages (e2e)', () => {
       .expect(200);
     expect(thread.body).toMatchObject({ canWrite: true, nextCursor: null });
     expect((thread.body as { items: unknown[] }).items).toHaveLength(1);
+  });
+
+  it('mails the recipient once per unread streak, without the message body', async () => {
+    const sender = await listed();
+    const recipient = await listed();
+    const server = app.getHttpServer();
+    const send = jest.spyOn(app.get(MailService), 'send');
+    send.mockClear();
+    const write = (body: string) =>
+      request(server)
+        .post('/messages')
+        .set('Cookie', sender.cookie)
+        .send({ recipientId: recipient.id, body })
+        .expect(201);
+
+    await write('Premier message confidentiel');
+    await write('Deuxieme message');
+    expect(send).toHaveBeenCalledTimes(1);
+    const mail = send.mock.calls[0][0];
+    expect(mail.to).toBe(recipient.email);
+    expect(mail.text).not.toContain('confidentiel');
+
+    await request(server)
+      .post(`/messages/with/${sender.id}/read`)
+      .set('Cookie', recipient.cookie)
+      .expect(200);
+    await write('Apres lecture');
+    expect(send).toHaveBeenCalledTimes(2);
+    send.mockRestore();
   });
 
   it('refuses writing to an unlisted member, but lets them answer', async () => {

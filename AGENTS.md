@@ -1,6 +1,8 @@
 # ShobukApp
 
-Member management SaaS for the Shobukan Dojo (kendo, https://www.shobukan-dojo.com). Practitioners sign up, buy and manage their membership, keep their documents and licences up to date and talk to each other. Administrators manage plans, payments, members, legal and accounting documents and Fédération Française de Kendo licences.
+Member management SaaS for the Shobukan Hombu Dojo (iaido, kendo, battodo, jojutsu, fuzokubudo; 255, avenue Daumesnil, 75012 Paris; https://www.shobukan-dojo.com). Practitioners sign up, buy and manage their membership, keep their documents and licences up to date and talk to each other. Administrators manage plans, payments, members, legal and accounting documents and licences, which are issued by the **FFJDA** (Fédération Française de Judo, Jujitsu, Kendo et Disciplines Associées), never "FFK".
+
+The dojo's public details (address, phone 01 43 07 05 65, info@shobukan-dojo.com, website) live in `apps/web/lib/dojo.ts` for the UI and in the mail signature of `MailService` for e-mails: change both together.
 
 Product scope and roles: `docs/product.md`. Tonight's MVP plan: `docs/mvp-plan.md`.
 
@@ -23,8 +25,9 @@ The database URL is not known yet: it arrives later through `DATABASE_URL`. Unti
 - Dependency: `pnpm --filter @shobukapp/<pkg> add <dep>`. Never npm install nor yarn.
 - **Tests come in two commands.** `pnpm --filter @shobukapp/api test` only runs unit tests, `pnpm --filter @shobukapp/api test:e2e` runs the e2e suite with its own config. Run both before committing a backend change. The e2e suite needs the database of `DATABASE_URL` migrated, and only removes users under `@e2e.shobukapp.test`.
 - Jest runs with `--experimental-vm-modules` (baked into the scripts): `@nestjs/config` 12 is ESM-only and Jest cannot `require()` it otherwise. Call the scripts, not `jest` directly.
-- Database: `pnpm --filter @shobukapp/api db:migrate` (create and apply a migration), `db:deploy` (apply existing ones), `db:generate` (client only), `db:studio`, `db:seed`.
-- Admin right: `pnpm --filter @shobukapp/api admin:grant <email>`. No HTTP route can grant it. First account on an empty database: `admin:invite <email> <first> <last>` prints an activation code; in production both scripts run inside the api container (`docs/deployment.md`).
+- Database: `pnpm --filter @shobukapp/api db:migrate` (create and apply a migration), `db:deploy` (apply existing ones), `db:generate` (client only), `db:studio`, `db:seed`. Locally the app runs on the **dev database through `make tunnel`**, while migrations, seed and e2e use `LOCAL_DATABASE_URL` (docs/database.md). `make db-dev-migrate`, `make db-prod-to-dev` (anonymized copy).
+- Prisma refuses `migrate reset` when run by an AI agent: reset the local Docker database by hand if needed, never the dev one.
+- Admin right: `pnpm --filter @shobukapp/api admin:grant <email>`. No HTTP route can grant it. First account on an empty database: `admin:invite <email> <first> <last>` prints an activation code.
 - Stripe in development: `stripe listen --forward-to localhost:3001/billing/webhook`, the printed secret goes in `STRIPE_WEBHOOK_SECRET`.
 - pnpm 11 refuses dependency install scripts by default. Decide in `allowBuilds` at the root of `pnpm-workspace.yaml`; never run `pnpm approve-builds` (interactive).
 
@@ -42,7 +45,8 @@ The database URL is not known yet: it arrives later through `DATABASE_URL`. Unti
 
 - Passwords are hashed with argon2id. A password hash is never selected outside the auth service, never returned, never logged, never exported.
 - Sessions are opaque random tokens in an httpOnly, SameSite=Lax cookie (`Secure` in production). The database stores only their SHA-256 hash.
-- `users.role` is modifiable by no route, not even from the admin dashboard. A dashboard able to name administrators turns a stolen session into a permanent takeover.
+- `users.role` changes only through `PATCH /admin/members/:id/role`, with the acting admin's password re-entered, never on oneself, never removing the last admin (row lock), journaled in `role_changes` and mailed to the member (docs/members.md, Roles). Accepted risk: a stolen admin session **plus** that admin's password can still name new admins; the journal and the mail are what make it visible.
+- An account created by an admin carries `must_change_password`: every route but `/auth/me`, `/auth/logout` and `/auth/password` answers 403 until the member replaces the temporary password.
 - **Guard order matters**: `SessionGuard` resolves the user, `RolesGuard` reads it. Reversed, the second sees nothing.
 - The web-side role check is a convenience, never a security.
 - Medical certificates are health data (GDPR article 9): visible only to their owner and to administrators, never listed in the member directory, never included in the members export.
