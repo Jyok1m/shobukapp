@@ -10,20 +10,24 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex min-h-16 w-full max-w-5xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
-          <Brand />
-          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+        <div className="mx-auto flex min-h-16 w-full max-w-5xl items-center justify-between gap-2 px-4 py-2 sm:px-6">
+          <Brand collapse />
+          <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
-            <DojoSiteLink
-              label="Site du dojo"
-              className="hidden min-h-10 rounded-md px-3 text-sm font-medium text-ink hover:bg-ink/5 sm:inline-flex sm:min-h-8"
-            />
+            {/* Wrapped: the link's own inline-flex would override a `hidden` passed to it. */}
+            <span className="hidden sm:inline-flex">
+              <DojoSiteLink
+                label="Site du dojo"
+                className="min-h-10 rounded-md px-3 text-sm font-medium text-ink hover:bg-ink/5 sm:min-h-8"
+              />
+            </span>
             <nav aria-label="Accès membres" className="flex items-center gap-1 sm:gap-2">
               <Link href="/connexion" className={buttonClasses("ghost", "sm")}>
                 Connexion
               </Link>
               <Link href="/nous-rejoindre" className={buttonClasses("primary", "sm")}>
-                Nous rejoindre
+                <span className="sm:hidden">Rejoindre</span>
+                <span className="hidden sm:inline">Nous rejoindre</span>
               </Link>
             </nav>
           </div>
