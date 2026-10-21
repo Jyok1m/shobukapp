@@ -92,3 +92,119 @@ export type Membership = {
   manageable: boolean;
   payments: Payment[];
 };
+
+/* Admin members (GET /admin/members), 50 per page. */
+export type MembershipFilter = "active" | "past_due" | "none";
+
+export type AdminMemberListItem = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  role: Role;
+  createdAt: string;
+  membership: {
+    status: string | null;
+    isMember: boolean;
+    planName: string | null;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+  };
+  lastPayment: { paidAt: string | null; amountCents: number; currency: string } | null;
+  failedPayments: number;
+  lastReminderAt: string | null;
+  /* Latest medical certificate, date only. */
+  medicalCertificate: { validUntil: string | null } | null;
+};
+
+export type AdminMembersPage = {
+  items: AdminMemberListItem[];
+  nextCursor: string | null;
+};
+
+export type PaymentReminder = {
+  id: string;
+  note: string | null;
+  createdAt: string;
+  sentBy: { firstName: string; lastName: string } | null;
+};
+
+/* GET /admin/members/:id */
+export type AdminMemberDetail = SelfUser & {
+  /* Current subscription, picked by the API. */
+  membership: AdminMemberListItem["membership"];
+  subscriptions: {
+    status: string;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    createdAt: string;
+    plan: { name: string } | null;
+  }[];
+  payments: Payment[];
+  remindersReceived: PaymentReminder[];
+};
+
+/* POST /admin/members/:id/reminders. "logged" means no SMTP server is configured. */
+export type ReminderResult = {
+  id: string;
+  createdAt: string;
+  note: string | null;
+  delivery: "sent" | "logged";
+};
+
+export type DocumentCategory = "MEDICAL_CERTIFICATE" | "LEGAL" | "ACCOUNTING" | "OTHER";
+
+/* A member document (ownerId set) or a dojo document (ownerId null). */
+export type MemberDocument = {
+  id: string;
+  ownerId: string | null;
+  category: DocumentCategory;
+  title: string;
+  mimeType: string;
+  sizeBytes: number;
+  validUntil: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type License = {
+  id: string;
+  userId: string;
+  season: string;
+  number: string;
+  hasFile: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Message = {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+};
+
+/* Never email or phone: docs/messaging.md. */
+export type Counterpart = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  isAdmin: boolean;
+  hasPhoto: boolean;
+};
+
+export type Conversation = {
+  counterpart: Counterpart;
+  lastMessage: Message;
+  unread: number;
+};
+
+export type Thread = {
+  counterpart: Counterpart;
+  canWrite: boolean;
+  items: Message[];
+  nextCursor: string | null;
+};

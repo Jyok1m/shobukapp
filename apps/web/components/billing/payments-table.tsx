@@ -4,9 +4,15 @@ import { Table, Td, Th } from "@/components/ui/table";
 import { formatAmount, formatShortDate, paymentStatuses } from "@/lib/format";
 import type { Payment } from "@/lib/types";
 
-export function PaymentsTable({ payments }: { payments: Payment[] }) {
+export function PaymentsTable({
+  payments,
+  emptyDescription = "Vos paiements apparaîtront ici après votre premier règlement.",
+}: {
+  payments: Payment[];
+  emptyDescription?: string;
+}) {
   if (payments.length === 0) {
-    return <EmptyState title="Aucun paiement" description="Vos paiements apparaîtront ici après votre premier règlement." />;
+    return <EmptyState title="Aucun paiement" description={emptyDescription} />;
   }
   return (
     <Table>

@@ -15,6 +15,9 @@ export const apiErrorMessages: Record<string, string> = {
   plan_not_found: "Cette formule n'est plus disponible.",
   billing_disabled: "Le paiement en ligne est momentanément indisponible.",
   no_billing_account: "Aucun compte de facturation n'est encore associé à votre profil.",
+  member_not_found: "Ce membre est introuvable. Il a peut-être été supprimé.",
+  cannot_delete_self: "Vous ne pouvez pas supprimer votre propre compte depuis l'administration.",
+  stripe_error: "Le service de paiement a rencontré une erreur, réessayez.",
 };
 
 const statusMessages: Record<number, string> = {

@@ -8,6 +8,7 @@ import { cx } from "@/lib/cx";
 import type { Role } from "@/lib/types";
 import { LogoutButton } from "./logout-button";
 import { adminNav, memberNav, type NavItem } from "./nav";
+import { useUnreadCount } from "./use-unread-count";
 
 export type ShellUser = { firstName: string; lastName: string; role: Role };
 
@@ -19,15 +20,19 @@ function NavList({
   items,
   pathname,
   onNavigate,
+  badges = {},
 }: {
   items: NavItem[];
   pathname: string;
   onNavigate: () => void;
+  /* Count shown next to an item, by href. Zero hides it. */
+  badges?: Record<string, number>;
 }) {
   return (
     <ul className="flex flex-col gap-0.5">
       {items.map((item) => {
         const active = isActive(pathname, item.href);
+        const badge = badges[item.href] ?? 0;
         return (
           <li key={item.href}>
             <Link
@@ -35,11 +40,17 @@ function NavList({
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               className={cx(
-                "block rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent",
+                "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent",
                 active ? "bg-accent-soft font-medium text-accent" : "text-ink hover:bg-ink/5",
               )}
             >
               {item.label}
+              {badge > 0 && (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
+                  {badge > 99 ? "99+" : badge}
+                  <span className="sr-only"> non lu{badge > 1 ? "s" : ""}</span>
+                </span>
+              )}
             </Link>
           </li>
         );
@@ -52,10 +63,11 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+  const unread = useUnreadCount();
 
   const navigation = (
     <nav aria-label="Navigation principale" className="flex flex-col gap-6">
-      <NavList items={memberNav} pathname={pathname} onNavigate={close} />
+      <NavList items={memberNav} pathname={pathname} onNavigate={close} badges={{ "/messagerie": unread }} />
       {user.role === "ADMIN" && (
         <div className="flex flex-col gap-2">
           <p className="px-3 text-xs font-semibold tracking-wider text-muted uppercase">
@@ -88,6 +100,12 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
           className="rounded-md px-3 py-1.5 text-sm font-medium text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent"
         >
           {open ? "Fermer" : "Menu"}
+          {!open && unread > 0 && (
+            <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
+              {unread > 99 ? "99+" : unread}
+              <span className="sr-only"> message{unread > 1 ? "s" : ""} non lu{unread > 1 ? "s" : ""}</span>
+            </span>
+          )}
         </button>
       </header>
 

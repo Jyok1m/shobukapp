@@ -13,6 +13,9 @@ type ConfirmDialogProps = {
   confirmVariant?: ButtonVariant;
   pending?: boolean;
   error?: string | null;
+  /* Extra content between the description and the buttons (a typed confirmation, for instance). */
+  children?: ReactNode;
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -27,11 +30,14 @@ export function ConfirmDialog({
   confirmVariant = "danger",
   pending = false,
   error,
+  children,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} title={title} description={description} dismissible={!pending} onClose={onCancel}>
+      {children}
       {error && (
         <p role="alert" className="text-sm font-medium text-danger">
           {error}
@@ -41,7 +47,7 @@ export function ConfirmDialog({
         <Button variant="secondary" onClick={onCancel} disabled={pending}>
           {cancelLabel}
         </Button>
-        <Button variant={confirmVariant} onClick={onConfirm} loading={pending}>
+        <Button variant={confirmVariant} onClick={onConfirm} loading={pending} disabled={confirmDisabled}>
           {confirmLabel}
         </Button>
       </div>

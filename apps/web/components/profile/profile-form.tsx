@@ -59,7 +59,28 @@ function TextField({
   );
 }
 
-export function ProfileForm({ user }: { user: SelfUser }) {
+/* Copy for the member's own profile and for an admin editing someone else's. */
+const copy = {
+  self: {
+    identity: "Votre adresse e-mail ne peut pas être modifiée ici.",
+    licence:
+      "Nécessaires pour établir votre licence FFK. Visibles uniquement par vous et les administrateurs du dojo.",
+    firstNameRequired: "Indiquez votre prénom.",
+    lastNameRequired: "Indiquez votre nom.",
+    submit: "Enregistrer mon profil",
+  },
+  admin: {
+    identity: "L'adresse e-mail et le mot de passe restent gérés par le membre.",
+    licence: "Nécessaires pour établir la licence FFK. Visibles uniquement par le membre et les administrateurs du dojo.",
+    firstNameRequired: "Indiquez le prénom.",
+    lastNameRequired: "Indiquez le nom.",
+    submit: "Enregistrer le profil",
+  },
+};
+
+/* Without memberId: PATCH /me. With memberId: PATCH /admin/members/:id (same body). */
+export function ProfileForm({ user, memberId }: { user: SelfUser; memberId?: string }) {
+  const text = memberId ? copy.admin : copy.self;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -76,15 +97,15 @@ export function ProfileForm({ user }: { user: SelfUser }) {
     >;
 
     const errors: FieldErrors = {};
-    if (!payload.firstName) errors.firstName = "Indiquez votre prénom.";
-    if (!payload.lastName) errors.lastName = "Indiquez votre nom.";
+    if (!payload.firstName) errors.firstName = text.firstNameRequired;
+    if (!payload.lastName) errors.lastName = text.lastNameRequired;
     setFieldErrors(errors);
     setError(null);
     setSaved(false);
     if (Object.keys(errors).length > 0) return;
 
     setPending(true);
-    const result = await apiRequest<SelfUser>("PATCH", "/me", payload);
+    const result = await apiRequest<SelfUser>("PATCH", memberId ? `/admin/members/${memberId}` : "/me", payload);
     setPending(false);
     if (!result.ok) {
       setError(result.error);
@@ -96,7 +117,7 @@ export function ProfileForm({ user }: { user: SelfUser }) {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
-      <Card title="Identité et coordonnées" description="Votre adresse e-mail ne peut pas être modifiée ici.">
+      <Card title="Identité et coordonnées" description={text.identity}>
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
             name="firstName"
@@ -133,7 +154,7 @@ export function ProfileForm({ user }: { user: SelfUser }) {
 
       <Card
         title="Informations pour la licence FFK"
-        description="Nécessaires pour établir votre licence FFK. Visibles uniquement par vous et les administrateurs du dojo."
+        description={text.licence}
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
@@ -204,7 +225,7 @@ export function ProfileForm({ user }: { user: SelfUser }) {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button type="submit" loading={pending}>
-          Enregistrer mon profil
+          {text.submit}
         </Button>
         {saved && <Notice tone="success">Profil enregistré.</Notice>}
       </div>
