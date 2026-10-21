@@ -46,6 +46,7 @@ export function pickCurrent<T extends SubscriptionLike>(subs: T[]): T | null {
 export type MembershipView = {
   status: string | null;
   isMember: boolean;
+  planId: string | null;
   planName: string | null;
   frequency: PlanInterval | null;
   currentPeriodEnd: Date | null;
@@ -164,6 +165,7 @@ export class SubscriptionsService {
     return {
       status: subscription?.status ?? null,
       isMember: MEMBER_STATUSES.includes(subscription?.status ?? ''),
+      planId: subscription?.planId ?? null,
       planName: subscription?.plan?.name ?? null,
       frequency: subscription?.frequency ?? null,
       currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
