@@ -3,12 +3,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { JoinRequestActions } from "@/components/admin/onboarding/join-request-actions";
+import { TrialScheduler } from "@/components/admin/onboarding/trial-scheduler";
 import { PageFallback } from "@/components/page-fallback";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import { invitationStatuses, joinRequestStatuses } from "@/lib/onboarding";
+import { invitationStatuses, joinRequestStatuses, trialBadge } from "@/lib/onboarding";
 import { requireUser } from "@/lib/session";
 import type { JoinRequest } from "@/lib/types";
 
@@ -31,6 +32,7 @@ async function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
   const request = await loadRequest((await params).id);
   const state = joinRequestStatuses[request.status];
   const invitation = request.invitation;
+  const trial = trialBadge(request);
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
@@ -44,7 +46,7 @@ async function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           <span>Reçue le {formatDate(request.createdAt)}</span>
           <Badge tone={state.tone}>{state.label}</Badge>
-          {request.wantsTrial && <Badge tone="success">Cours d&apos;essai</Badge>}
+          {trial && <Badge tone={trial.tone}>{trial.label}</Badge>}
         </div>
       </div>
 
@@ -94,6 +96,12 @@ async function RequestDetail({ params }: { params: Promise<{ id: string }> }) {
           </dd>
         </dl>
       </Card>
+
+      {request.wantsTrial && (
+        <Card title="Cours d'essai">
+          <TrialScheduler request={request} />
+        </Card>
+      )}
 
       <Card title="Actions">
         <JoinRequestActions request={request} />

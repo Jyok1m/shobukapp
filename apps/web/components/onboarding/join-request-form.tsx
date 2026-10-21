@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest } from "@/lib/client-api";
 import { ConsentCheckbox } from "./consent-checkbox";
+import { TrialCalendar } from "./trial-calendar";
 
-type Key = "firstName" | "lastName" | "email" | "message" | "acceptPrivacy";
+type Key = "firstName" | "lastName" | "email" | "message" | "trialDates" | "acceptPrivacy";
 type Errors = Partial<Record<Key, string>>;
 
 export function JoinRequestForm() {
@@ -18,6 +19,8 @@ export function JoinRequestForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
+  const [wantsTrial, setWantsTrial] = useState(false);
+  const [trialDates, setTrialDates] = useState<string[]>([]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,7 +32,7 @@ export function JoinRequestForm() {
       email: text("email"),
       phone: text("phone"),
       message: text("message"),
-      wantsTrial: data.get("wantsTrial") === "on",
+      wantsTrial,
       acceptPrivacy: data.get("acceptPrivacy") === "on",
       // Honeypot: a person never fills it. Sent as is so a bot gets the same answer.
       website: String(data.get("website") ?? ""),
@@ -39,6 +42,7 @@ export function JoinRequestForm() {
     if (!values.lastName) next.lastName = "Indiquez votre nom.";
     if (!/^\S+@\S+\.\S+$/.test(values.email)) next.email = "Indiquez une adresse e-mail valide.";
     if (values.message.length < 10) next.message = "Présentez-vous en quelques mots (10 caractères minimum).";
+    if (wantsTrial && trialDates.length === 0) next.trialDates = "Choisissez au moins un soir pour votre cours d'essai.";
     if (!values.acceptPrivacy) next.acceptPrivacy = "Votre accord est nécessaire pour que le dojo vous recontacte.";
     setErrors(next);
     setError(null);
@@ -49,11 +53,13 @@ export function JoinRequestForm() {
     const result = await apiRequest("POST", "/join-requests", {
       ...rest,
       acceptPrivacy: true,
+      ...(wantsTrial && { trialDates }),
       ...(phone && { phone }),
       ...(website && { website }),
     });
     setPending(false);
     if (!result.ok) {
+      if (result.code === "invalid_trial_dates") return setErrors({ trialDates: result.error });
       return setError(
         result.status === 429
           ? "Vous avez déjà envoyé plusieurs demandes. Le bureau vous répondra : patientez une heure avant de réessayer."
@@ -108,16 +114,40 @@ export function JoinRequestForm() {
         <label htmlFor="website">Site web</label>
         <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
-      <div className="flex items-start gap-3">
-        <input
-          id="wantsTrial"
-          name="wantsTrial"
-          type="checkbox"
-          className="mt-0.5 size-4 shrink-0 accent-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        />
-        <label htmlFor="wantsTrial" className="text-sm text-ink">
-          Je souhaite faire un cours d&apos;essai
-        </label>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start gap-3">
+          <input
+            id="wantsTrial"
+            name="wantsTrial"
+            type="checkbox"
+            checked={wantsTrial}
+            onChange={(event) => setWantsTrial(event.target.checked)}
+            aria-controls="trial-dates"
+            className="mt-0.5 size-4 shrink-0 accent-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          />
+          <label htmlFor="wantsTrial" className="text-sm text-ink">
+            Je souhaite faire un cours d&apos;essai
+          </label>
+        </div>
+        {wantsTrial && (
+          <fieldset id="trial-dates" className="flex flex-col gap-3">
+            <legend className="sr-only">Soirs pour le cours d&apos;essai</legend>
+            <p id="trial-dates-hint" className="text-sm text-muted">
+              Le dojo est ouvert le lundi, le mercredi et le vendredi soir. Choisissez les soirs où vous pouvez venir : le
+              bureau vous confirmera la date et l&apos;heure.
+            </p>
+            <TrialCalendar
+              value={trialDates}
+              onChange={setTrialDates}
+              describedBy={errors.trialDates ? "trial-dates-hint trial-dates-error" : "trial-dates-hint"}
+            />
+            {errors.trialDates && (
+              <p id="trial-dates-error" className="text-xs font-medium text-danger">
+                {errors.trialDates}
+              </p>
+            )}
+          </fieldset>
+        )}
       </div>
       <ConsentCheckbox id="acceptPrivacy" error={errors.acceptPrivacy}>
         J&apos;accepte que le Shobukan Dojo conserve ces informations pour répondre à ma demande (

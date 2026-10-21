@@ -30,7 +30,7 @@ export function DocumentBoardSections({ board }: { board: DocumentBoard }) {
           </h2>
           <ul className="grid gap-4 md:grid-cols-2">
             {announcements.map((document) => (
-              <li key={document.id} className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-5 shadow-xs">
+              <li key={document.id} className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-5">
                 <p className="text-xs text-muted">Publié le {formatDate(document.publishedAt ?? document.createdAt)}</p>
                 <h3 className="font-serif text-lg font-semibold break-words text-ink">{document.title}</h3>
                 {document.description && (

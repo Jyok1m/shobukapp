@@ -102,10 +102,12 @@ export function AppShell({
 
   const account = (
     <div className="flex flex-col gap-3 border-t border-line pt-4">
-      <p className="truncate px-3 text-sm font-medium text-ink">
-        {user.firstName} {user.lastName}
-      </p>
-      <ThemeToggle />
+      <div className="flex items-center justify-between gap-2 pl-3">
+        <p className="truncate text-sm font-medium text-ink">
+          {user.firstName} {user.lastName}
+        </p>
+        <ThemeToggle />
+      </div>
       <LogoutButton className="w-full" />
     </div>
   );
@@ -137,7 +139,7 @@ export function AppShell({
             type="button"
             aria-label="Fermer le menu"
             onClick={close}
-            className="absolute inset-0 bg-scrim/40"
+            className="absolute inset-0 bg-scrim"
           />
           <div
             id="mobile-nav"

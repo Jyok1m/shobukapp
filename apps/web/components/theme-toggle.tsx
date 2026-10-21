@@ -1,62 +1,46 @@
 "use client";
 
 import { cx } from "@/lib/cx";
-import { setTheme, useTheme, type ThemeChoice } from "@/lib/theme";
+import { setTheme, useResolvedTheme } from "@/lib/theme";
 
-const choices: { value: ThemeChoice; label: string }[] = [
-  { value: "light", label: "Clair" },
-  { value: "dark", label: "Sombre" },
-  { value: "system", label: "Système" },
-];
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="size-5">
+      <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden className="size-5">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" />
+    </svg>
+  );
+}
 
 /*
- * Segmented radio group (one tab stop, arrow keys between choices), or a
- * compact select where space is short (public header on a phone).
+ * One button: a moon in light mode, a sun in dark mode. Until the user clicks,
+ * the page follows the system preference (no stored choice).
  */
-export function ThemeToggle({ className, compact = false }: { className?: string; compact?: boolean }) {
-  const current = useTheme();
-  if (compact) {
-    return (
-      <label className={cx("relative inline-flex items-center", className)}>
-        <span className="sr-only">Thème d&apos;affichage</span>
-        <select
-          value={current}
-          onChange={(event) => setTheme(event.target.value as ThemeChoice)}
-          className="min-h-10 rounded-md border border-line bg-surface px-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-accent sm:min-h-8"
-        >
-          {choices.map((choice) => (
-            <option key={choice.value} value={choice.value}>
-              {choice.label}
-            </option>
-          ))}
-        </select>
-      </label>
-    );
-  }
+export function ThemeToggle({ className }: { className?: string }) {
+  const resolved = useResolvedTheme();
+  // Unknown until hydration: a neutral name rather than a possibly wrong action.
+  const label =
+    resolved === null ? "Changer de thème" : resolved === "dark" ? "Activer le thème clair" : "Activer le thème sombre";
   return (
-    <fieldset className={cx("flex flex-col gap-1.5", className)}>
-      <legend className="sr-only">Thème d&apos;affichage</legend>
-      <div className="grid grid-cols-3 rounded-md border border-line bg-paper p-0.5 text-xs">
-        {choices.map((choice) => (
-          <label
-            key={choice.value}
-            className={cx(
-              "flex min-h-10 items-center justify-center rounded px-2 font-medium transition-colors has-focus-visible:outline-2 has-focus-visible:outline-accent sm:min-h-8",
-              current === choice.value ? "bg-surface text-ink shadow-xs" : "text-muted hover:text-ink",
-            )}
-          >
-            <input
-              type="radio"
-              name="theme"
-              value={choice.value}
-              checked={current === choice.value}
-              onChange={() => setTheme(choice.value)}
-              className="sr-only"
-            />
-            {choice.label}
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    <button
+      type="button"
+      onClick={() => setTheme(resolved === "dark" ? "light" : "dark")}
+      aria-label={label}
+      title={label}
+      className={cx(
+        "inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-ink/5 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:size-9",
+        className,
+      )}
+    >
+      {resolved === "dark" ? <SunIcon /> : resolved === "light" ? <MoonIcon /> : <span className="size-5" />}
+    </button>
   );
 }

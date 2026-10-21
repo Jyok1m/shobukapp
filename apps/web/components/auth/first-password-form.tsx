@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { ConsentCheckbox } from "@/components/onboarding/consent-checkbox";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -22,6 +22,7 @@ export function FirstPasswordForm({ needsTerms }: { needsTerms: boolean }) {
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [navigating, startNavigation] = useTransition();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,8 +54,12 @@ export function FirstPasswordForm({ needsTerms }: { needsTerms: boolean }) {
       if (result.code === "invalid_credentials") return setErrors({ currentPassword: "Mot de passe provisoire incorrect." });
       return setError(result.error);
     }
-    router.replace("/tableau-de-bord");
-    router.refresh();
+    // Next keeps this component's state across navigations: clear pending inside the transition, so it stays busy until the next page shows.
+    startNavigation(() => {
+      setPending(false);
+      router.replace("/tableau-de-bord");
+      router.refresh();
+    });
   }
 
   return (
@@ -92,7 +97,7 @@ export function FirstPasswordForm({ needsTerms }: { needsTerms: boolean }) {
           du Shobukan Dojo (s&apos;ouvre dans un nouvel onglet).
         </ConsentCheckbox>
       )}
-      <Button type="submit" loading={pending} className="mt-2 w-full">
+      <Button type="submit" loading={pending || navigating} className="mt-2 w-full">
         Enregistrer mon mot de passe
       </Button>
     </form>

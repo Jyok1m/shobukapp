@@ -32,7 +32,7 @@ async function Requests({ searchParams }: { searchParams: SearchParams }) {
                   aria-current={current ? "page" : undefined}
                   className={cx(
                     "inline-flex min-h-10 sm:min-h-8 items-center rounded-full border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-                    current ? "border-accent bg-accent text-on-accent" : "border-line bg-surface text-ink hover:bg-paper",
+                    current ? "border-accent bg-accent-soft text-accent" : "border-line bg-surface text-ink hover:bg-paper",
                   )}
                 >
                   {item.label}

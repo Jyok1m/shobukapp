@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { apiRequest } from "@/lib/client-api";
 import { formatDate } from "@/lib/format";
-import { joinRequestStatuses } from "@/lib/onboarding";
+import { joinRequestStatuses, trialBadge } from "@/lib/onboarding";
 import type { JoinRequestsPage, JoinRequestStatus } from "@/lib/types";
 import { joinRequestsPath } from "./join-request-filters";
 
@@ -43,18 +43,19 @@ export function JoinRequestList({ initial, status }: { initial: JoinRequestsPage
       <ul className="flex flex-col gap-3">
         {items.map((request) => {
           const state = joinRequestStatuses[request.status];
+          const trial = trialBadge(request);
           return (
             <li key={request.id}>
               <Link
                 href={`/admin/demandes/${request.id}`}
-                className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-4 shadow-xs transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-5"
+                className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-4 transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:p-5"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-ink">
                     {request.firstName} {request.lastName}
                   </span>
                   <Badge tone={state.tone}>{state.label}</Badge>
-                  {request.wantsTrial && <Badge tone="success">Cours d&apos;essai</Badge>}
+                  {trial && <Badge tone={trial.tone}>{trial.label}</Badge>}
                   <span className="ml-auto text-xs text-muted">{formatDate(request.createdAt)}</span>
                 </div>
                 <p className="line-clamp-2 text-sm whitespace-pre-line text-muted">{request.message}</p>

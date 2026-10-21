@@ -10,7 +10,7 @@ export default function FirstLoginLayout({ children }: { children: React.ReactNo
         <div className="mx-auto flex min-h-16 w-full max-w-5xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
           <Brand href="/premiere-connexion" />
           <div className="flex items-center gap-2">
-            <ThemeToggle compact />
+            <ThemeToggle />
             <LogoutButton />
           </div>
         </div>

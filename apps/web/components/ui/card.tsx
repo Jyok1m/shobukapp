@@ -9,7 +9,7 @@ type CardProps = HTMLAttributes<HTMLDivElement> & {
 export function Card({ title, description, className, children, ...props }: CardProps) {
   return (
     <div
-      className={cx("rounded-lg border border-line bg-surface p-5 shadow-xs sm:p-6", className)}
+      className={cx("rounded-lg border border-line bg-surface p-5 sm:p-6", className)}
       {...props}
     >
       {(title || description) && (

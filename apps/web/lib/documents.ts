@@ -1,3 +1,4 @@
+import { parisToday } from "@/lib/trial";
 import type { BadgeTone } from "@/components/ui/badge";
 import type { ApiResult } from "./client-api";
 import type { DocumentCategory, Placement } from "./types";
@@ -45,9 +46,9 @@ export function formatBytes(bytes: number): string {
   return `${format(bytes / (1024 * 1024))} Mo`;
 }
 
-/* Today in Paris as YYYY-MM-DD (en-CA formats dates that way). */
+/* Today in Paris as YYYY-MM-DD. */
 export function todayInParis(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
+  return parisToday(Date.now());
 }
 
 /* A certificate is valid through its last day. Dates are compared as YYYY-MM-DD strings. */

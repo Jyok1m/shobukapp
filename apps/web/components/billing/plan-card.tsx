@@ -18,7 +18,7 @@ export function PriceList({ plan }: { plan: PublicPlan }) {
 
 export function PlanCard({ plan, children }: { plan: PublicPlan; children: ReactNode }) {
   return (
-    <li className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5 shadow-xs sm:p-6">
+    <li className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5 sm:p-6">
       <div className="flex flex-col gap-1">
         <h3 className="font-serif text-lg font-semibold text-ink">{plan.name}</h3>
         {plan.description && <p className="text-sm whitespace-pre-line text-muted">{plan.description}</p>}

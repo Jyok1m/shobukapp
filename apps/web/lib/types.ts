@@ -313,6 +313,10 @@ export type JoinRequest = {
   phone: string | null;
   message: string;
   wantsTrial: boolean;
+  /* Evenings offered by the visitor, ISO dates at midnight UTC (the calendar day is the first 10 characters). */
+  trialDates: string[];
+  /* Slot confirmed by an admin, ISO instant. */
+  trialScheduledAt: string | null;
   status: JoinRequestStatus;
   handledAt: string | null;
   createdAt: string;
@@ -325,6 +329,9 @@ export type JoinRequestsPage = {
   items: JoinRequest[];
   nextCursor: string | null;
 };
+
+/* POST /admin/join-requests/:id/trial */
+export type TrialScheduleResult = JoinRequest & { delivery: MailDelivery };
 
 /* POST /admin/join-requests/:id/invite */
 export type LinkInvitationResult = { link: string; expiresAt: string; delivery: MailDelivery };

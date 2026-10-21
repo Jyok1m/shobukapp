@@ -1,12 +1,31 @@
 # Design
 
-Identity of https://www.shobukan-dojo.com. **Logo**: the kanji 武 (bu), single colour. `components/logo.tsx` draws it in `currentColor` (accent red in the brand, light red in dark mode); `public/logo.svg` is the cleaned standalone file (black); `app/icon.svg` is the favicon (accent red, light red when the browser is dark); `app/apple-icon.png` (180 px, paper background, iOS ignores transparency) is generated from it with `rsvg-convert`. Never raster the logo for display in the app: it stays vector.
+Identity of https://www.shobukan-dojo.com, in the spirit of Budo: **zen and restrained**. Washi paper, sumi ink, and ai-iro (the indigo of keikogi and hakama) as the only action colour. Red only for errors. Generous whitespace, borders rather than shadows, serif titles. No pink, no saturated fills except the primary button and small counters.
 
-- Tailwind 4 tokens in `app/globals.css` under `@theme`: `ink` (text), `paper` (background), `surface`, `line`, `field` (input borders, 3:1 against the background), `accent` / `accent-strong` / `accent-soft` (deep red), `on-accent` (text on accent or danger), `muted`, `danger` / `danger-soft`, `success` / `success-soft`, `warning` / `warning-soft` (Stripe test mode), `scrim` (dialog and menu backdrops). Components use the tokens, never raw colors (`bg-white`, `zinc-*`, hex).
-- **Dark mode**: every token is redefined under `prefers-color-scheme: dark` (via `:root:not([data-theme="light"])`) and under `:root[data-theme="dark"]`. The Clair / Sombre / Système choice is stored in localStorage (try/catch) and applied before paint by an inline script in `<head>` (`lib/theme-script.ts`, a constant: never interpolate anything user-controlled into it). Contrast AA checked in both themes.
-- **Cursors**: Tailwind 4 resets buttons to `cursor: default`; a `@layer base` rule restores `pointer` on buttons, `[role=button]`, `summary`, `select`, `label[for]`, checkboxes, radios, file and range inputs, and `not-allowed` when disabled.
-- **Mobile**: no horizontal scroll from 320 px; tap targets at least 44 px below `sm`; tables scroll inside a `relative` container (an absolutely positioned `sr-only` in a cell otherwise widens the whole page).
-- Images are never stretched (`object-cover`, fixed aspect) nor upscaled. Profile photos are cropped square in the browser (react-easy-crop) at the source resolution, capped at 1024 px, PNG (lossless).
+**Logo**: the kanji 武 (bu), single colour, always drawn in ink (`text-ink`): sumi on paper, washi on dark. `components/logo.tsx` uses `currentColor`; `public/logo.svg` is the cleaned standalone file; `app/icon.svg` (tab icon, ink, washi when the browser is dark), `app/favicon.ico` (16/32/48 px, ink on a washi square, readable on any tab bar) and `app/apple-icon.png` (180 px, iOS ignores transparency) are generated from it with `rsvg-convert`. Never raster the logo for display in the app.
+
+Tokens in `app/globals.css` (light / dark), every text pair at least 4.5:1, borders at least 3:1 (checked by script):
+
+| Token | Light | Dark |
+|---|---|---|
+| paper | #f5f2eb | #121110 |
+| surface | #fbf9f4 | #1b1a17 |
+| ink | #1d1b18 | #ebe7de |
+| muted | #625d55 | #a49e93 |
+| line | #e3ded3 | #2e2b27 |
+| field (input borders) | #8f877b | #6e685f |
+| accent (ai-iro) | #24405f | #9fb3cb |
+| accent-strong | #182d44 | #c3d0df |
+| accent-soft | #e4e9ef | #1f2a36 |
+| on-accent | #fbf9f4 | #121110 |
+| danger / danger-soft | #9b2c22 / #f6e4e0 | #e0886f / #3a211b |
+| success / success-soft | #2f5d3a / #e3eee5 | #8fbf98 / #1d2b20 |
+| warning / warning-soft | #7a5a12 / #f5ecd6 | #d9b26a / #33291a |
+| scrim | rgb(29 27 24 / 0.45) | rgb(0 0 0 / 0.6) |
+
+`scrim` carries its own alpha: never add an opacity modifier to it.
+
+- **Dark mode**: every token is redefined under `prefers-color-scheme: dark` (via `:root:not([data-theme="light"])`) and under `:root[data-theme="dark"]`. One icon button (moon in light, sun in dark, "Activer le thème sombre / clair") toggles; until the first click the page follows the system. The choice is stored in localStorage (try/catch) and applied before paint by an inline script in `<head>` (`lib/theme-script.ts`, a constant: never interpolate anything user-controlled into it).
 - Fonts through `next/font`: one sans for the UI, optionally one serif for titles.
 - Shared components in `components/ui/`: `Button`, `Input`, `Select`, `Field` (label, hint, error), `Card`, `Badge` (subscription status), `Table`, `EmptyState`, `ConfirmDialog`, `FileDrop`. Build a new primitive only if none fits.
 - Layout: sidebar navigation on desktop, bottom or burger navigation on mobile. Admin screens share the shell with an "Administration" section visible only to admins.

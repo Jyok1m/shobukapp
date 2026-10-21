@@ -36,7 +36,7 @@ export function DeleteMemberZone({ memberId, firstName, lastName }: { memberId: 
   return (
     <section
       aria-labelledby="danger-zone-title"
-      className="rounded-lg border border-danger/30 bg-surface p-5 shadow-xs sm:p-6"
+      className="rounded-lg border border-danger/30 bg-surface p-5 sm:p-6"
     >
       <h2 id="danger-zone-title" className="font-serif text-lg font-semibold text-danger">
         Zone de danger

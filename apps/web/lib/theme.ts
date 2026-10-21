@@ -4,8 +4,10 @@ import { useSyncExternalStore } from "react";
 import { THEME_STORAGE_KEY as KEY } from "./theme-script";
 
 export type ThemeChoice = "light" | "dark" | "system";
+export type ResolvedTheme = "light" | "dark";
 
 const EVENT = "shobukapp:theme";
+const DARK_QUERY = "(prefers-color-scheme: dark)";
 
 function read(): ThemeChoice {
   try {
@@ -14,6 +16,13 @@ function read(): ThemeChoice {
   } catch {
     return "system";
   }
+}
+
+/* What is on screen: the stored choice, or the system preference until the user picks one. */
+function readResolved(): ResolvedTheme {
+  const attribute = document.documentElement.dataset.theme;
+  if (attribute === "light" || attribute === "dark") return attribute;
+  return window.matchMedia(DARK_QUERY).matches ? "dark" : "light";
 }
 
 export function setTheme(choice: ThemeChoice) {
@@ -29,7 +38,7 @@ export function setTheme(choice: ThemeChoice) {
 }
 
 function subscribe(onChange: () => void) {
-  // Another tab changed the theme: apply it here too, not only the selector.
+  // Another tab changed the theme: apply it here too, not only the button.
   const onStorage = (event: StorageEvent) => {
     if (event.key !== null && event.key !== KEY) return;
     const choice = read();
@@ -37,14 +46,18 @@ function subscribe(onChange: () => void) {
     else document.documentElement.dataset.theme = choice;
     onChange();
   };
+  const media = window.matchMedia(DARK_QUERY);
   window.addEventListener(EVENT, onChange);
   window.addEventListener("storage", onStorage);
+  media.addEventListener("change", onChange);
   return () => {
     window.removeEventListener(EVENT, onChange);
     window.removeEventListener("storage", onStorage);
+    media.removeEventListener("change", onChange);
   };
 }
 
-export function useTheme(): ThemeChoice {
-  return useSyncExternalStore(subscribe, read, () => "system");
+/* null on the server and during hydration: the theme is only known in the browser. */
+export function useResolvedTheme(): ResolvedTheme | null {
+  return useSyncExternalStore(subscribe, readResolved, () => null);
 }

@@ -49,7 +49,7 @@ export function Messenger({ initial, currentUserId }: { initial: Conversation[];
   }
 
   return (
-    <div className="grid min-h-112 flex-1 overflow-hidden rounded-lg border border-line bg-surface shadow-xs lg:h-[calc(100dvh-14rem)] lg:flex-none lg:grid-cols-[20rem_1fr]">
+    <div className="grid min-h-112 flex-1 overflow-hidden rounded-lg border border-line bg-surface lg:h-[calc(100dvh-14rem)] lg:flex-none lg:grid-cols-[20rem_1fr]">
       <section
         aria-label="Conversations"
         className={cx("min-h-0 overflow-y-auto lg:block lg:border-r lg:border-line", selectedId ? "hidden" : "block")}

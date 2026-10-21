@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { FormAlert } from "@/components/auth/form-alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -36,6 +36,7 @@ export function AccountForm({ mode }: { mode: Mode }) {
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
   const [pending, setPending] = useState(false);
+  const [navigating, startNavigation] = useTransition();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,8 +86,12 @@ export function AccountForm({ mode }: { mode: Mode }) {
       }
       return setError(result.error);
     }
-    router.push("/tableau-de-bord");
-    router.refresh();
+    // Next keeps this component's state across navigations: clear pending inside the transition, so it stays busy until the next page shows.
+    startNavigation(() => {
+      setPending(false);
+      router.push("/tableau-de-bord");
+      router.refresh();
+    });
   }
 
   return (
@@ -173,7 +178,7 @@ export function AccountForm({ mode }: { mode: Mode }) {
         </Link>{" "}
         du Shobukan Dojo (s&apos;ouvre dans un nouvel onglet).
       </ConsentCheckbox>
-      <Button type="submit" loading={pending} className="mt-2 w-full">
+      <Button type="submit" loading={pending || navigating} className="mt-2 w-full">
         Créer mon compte
       </Button>
       <p className="text-center text-sm text-muted">

@@ -73,36 +73,47 @@ function PriceRow({
   const amountId = `${idPrefix}-amount-${frequency}`;
   const offeredId = `${idPrefix}-offered-${frequency}`;
   const errorId = `${amountId}-error`;
+  const unitId = `${amountId}-unit`;
   return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 py-3 sm:grid-cols-[8rem_1fr_auto]">
-      <label htmlFor={amountId} className="col-span-2 text-sm font-medium text-ink sm:col-span-1">
+    <div className="flex flex-col gap-2 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
+      <label htmlFor={amountId} className="text-sm font-medium text-ink sm:w-24 sm:shrink-0">
         {frequencyNames[frequency]}
       </label>
-      <div className="flex items-center gap-2">
-        <Input
-          id={amountId}
-          name={`amount-${frequency}`}
-          inputMode="decimal"
-          defaultValue={current ? centsToInput(current.amountCents) : ""}
-          placeholder="0,00"
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          className="w-28 shrink-0"
-        />
-        <span className="text-sm whitespace-nowrap text-muted">€ {frequencyUnits[frequency]}</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:flex-1">
+        <div className="flex items-center gap-2">
+          <div className="relative w-32 shrink-0">
+            <Input
+              id={amountId}
+              name={`amount-${frequency}`}
+              inputMode="decimal"
+              defaultValue={current ? centsToInput(current.amountCents) : ""}
+              placeholder="0,00"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? `${unitId} ${errorId}` : unitId}
+              className="pr-8 text-right"
+            />
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted">
+              €
+            </span>
+          </div>
+          <span id={unitId} className="text-sm whitespace-nowrap text-muted">
+            <span className="sr-only">en euros, </span>
+            {frequencyUnits[frequency]}
+          </span>
+        </div>
+        <label htmlFor={offeredId} className="ml-auto flex min-h-11 items-center gap-2 text-sm text-ink sm:min-h-0">
+          <input
+            id={offeredId}
+            name={`offered-${frequency}`}
+            type="checkbox"
+            defaultChecked={plan ? Boolean(current?.active) : frequency === "YEAR"}
+            className="size-4 accent-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          />
+          Proposé<span className="sr-only"> ({frequencyNames[frequency].toLowerCase()})</span>
+        </label>
       </div>
-      <label htmlFor={offeredId} className="flex min-h-11 items-center gap-2 text-sm text-ink sm:min-h-0">
-        <input
-          id={offeredId}
-          name={`offered-${frequency}`}
-          type="checkbox"
-          defaultChecked={plan ? Boolean(current?.active) : frequency === "YEAR"}
-          className="size-4 accent-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        />
-        Proposé<span className="sr-only"> ({frequencyNames[frequency].toLowerCase()})</span>
-      </label>
       {error && (
-        <p id={errorId} className="col-span-2 text-xs font-medium text-danger sm:col-span-3">
+        <p id={errorId} className="text-xs font-medium text-danger sm:basis-full sm:pl-28">
           {error}
         </p>
       )}

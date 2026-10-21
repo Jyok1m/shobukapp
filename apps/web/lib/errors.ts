@@ -34,6 +34,10 @@ export const apiErrorMessages: Record<string, string> = {
   not_publishable: "Ce document ne peut pas être publié : seuls les documents du dojo peuvent l'être.",
   invalid_invitation: "Ce lien ou ce code d'inscription n'est plus valable.",
   join_request_not_found: "Cette demande est introuvable. Elle a peut-être été supprimée.",
+  invalid_trial_dates:
+    "Certains soirs choisis ne sont plus disponibles. Choisissez un lundi, un mercredi ou un vendredi, entre demain et les deux prochains mois.",
+  invalid_trial_slot: "Choisissez un lundi, un mercredi ou un vendredi à venir.",
+  no_trial_requested: "Cette personne n'a pas demandé de cours d'essai.",
   invitation_not_found: "Cette invitation n'est plus en attente : elle a déjà été utilisée, révoquée ou a expiré.",
 };
 

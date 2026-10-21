@@ -47,7 +47,7 @@ export function CookieNotice() {
   return (
     <section
       aria-label="Information sur les cookies"
-      className="sticky bottom-0 z-40 border-t border-line bg-surface px-4 py-2 shadow-lg sm:py-3 lg:fixed lg:right-4 lg:bottom-4 lg:max-w-md lg:rounded-lg lg:border"
+      className="sticky bottom-0 z-40 border-t border-line bg-surface px-4 py-2 shadow-sm sm:py-3 lg:fixed lg:right-4 lg:bottom-4 lg:max-w-md lg:rounded-lg lg:border"
     >
       <div className="mx-auto flex max-w-5xl items-center gap-3 sm:gap-4 lg:mx-0">
         <p className="flex-1 text-xs text-ink sm:text-sm">

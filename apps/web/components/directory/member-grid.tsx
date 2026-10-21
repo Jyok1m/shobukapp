@@ -12,7 +12,7 @@ import type { DirectoryMember, DirectoryPage } from "@/lib/types";
 function MemberCard({ member, isSelf }: { member: DirectoryMember; isSelf: boolean }) {
   const name = `${member.firstName} ${member.lastName}`;
   return (
-    <li className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5 shadow-xs">
+    <li className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5">
       <div className="flex items-center gap-3">
         <MemberAvatar
           firstName={member.firstName}

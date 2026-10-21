@@ -1,27 +1,29 @@
 @import "tailwindcss";
 
 /*
- * Light tokens. Every pair used for text was checked at WCAG AA (4.5:1) or
- * better; `field` (input borders) meets the 3:1 non-text contrast.
+ * Light tokens: washi paper, sumi ink, ai-iro indigo as the only action color,
+ * red only for errors. Every pair used for text was checked at WCAG AA (4.5:1)
+ * or better; `field` (input borders) meets the 3:1 non-text contrast. `scrim`
+ * carries its own alpha: use it without an opacity modifier.
  */
 @theme {
-  --color-ink: #1c1917;
-  --color-paper: #faf7f2;
-  --color-surface: #ffffff;
-  --color-line: #e7e0d6;
-  --color-field: #8a8075;
-  --color-accent: #8b1d1d;
-  --color-accent-strong: #6f1616;
-  --color-accent-soft: #f6e7e5;
-  --color-on-accent: #ffffff;
-  --color-muted: #6b625a;
-  --color-danger: #b42318;
-  --color-danger-soft: #fdecea;
-  --color-success: #2f6b3a;
-  --color-success-soft: #e8f3ea;
-  --color-warning: #7a4f00;
-  --color-warning-soft: #fdf3dc;
-  --color-scrim: #1c1917;
+  --color-ink: #1d1b18;
+  --color-paper: #f5f2eb;
+  --color-surface: #fbf9f4;
+  --color-line: #e3ded3;
+  --color-field: #8f877b;
+  --color-accent: #24405f;
+  --color-accent-strong: #182d44;
+  --color-accent-soft: #e4e9ef;
+  --color-on-accent: #fbf9f4;
+  --color-muted: #625d55;
+  --color-danger: #9b2c22;
+  --color-danger-soft: #f6e4e0;
+  --color-success: #2f5d3a;
+  --color-success-soft: #e3eee5;
+  --color-warning: #7a5a12;
+  --color-warning-soft: #f5ecd6;
+  --color-scrim: rgb(29 27 24 / 0.45);
 }
 
 @theme inline {
@@ -38,45 +40,45 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --color-ink: #eee8df;
-      --color-paper: #14110f;
-      --color-surface: #1e1a17;
-      --color-line: #3b342e;
-      --color-field: #7d7369;
-      --color-accent: #f0948a;
-      --color-accent-strong: #f7b2aa;
-      --color-accent-soft: #3d211e;
-      --color-on-accent: #1a0f0d;
-      --color-muted: #b0a69b;
-      --color-danger: #f4978e;
-      --color-danger-soft: #3e1f1b;
-      --color-success: #8fd19b;
-      --color-success-soft: #1b3321;
-      --color-warning: #f2c46d;
-      --color-warning-soft: #33280f;
-      --color-scrim: #000000;
+      --color-ink: #ebe7de;
+      --color-paper: #121110;
+      --color-surface: #1b1a17;
+      --color-line: #2e2b27;
+      --color-field: #6e685f;
+      --color-accent: #9fb3cb;
+      --color-accent-strong: #c3d0df;
+      --color-accent-soft: #1f2a36;
+      --color-on-accent: #121110;
+      --color-muted: #a49e93;
+      --color-danger: #e0886f;
+      --color-danger-soft: #3a211b;
+      --color-success: #8fbf98;
+      --color-success-soft: #1d2b20;
+      --color-warning: #d9b26a;
+      --color-warning-soft: #33291a;
+      --color-scrim: rgb(0 0 0 / 0.6);
     }
   }
 
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --color-ink: #eee8df;
-    --color-paper: #14110f;
-    --color-surface: #1e1a17;
-    --color-line: #3b342e;
-    --color-field: #7d7369;
-    --color-accent: #f0948a;
-    --color-accent-strong: #f7b2aa;
-    --color-accent-soft: #3d211e;
-    --color-on-accent: #1a0f0d;
-    --color-muted: #b0a69b;
-    --color-danger: #f4978e;
-    --color-danger-soft: #3e1f1b;
-    --color-success: #8fd19b;
-    --color-success-soft: #1b3321;
-    --color-warning: #f2c46d;
-    --color-warning-soft: #33280f;
-    --color-scrim: #000000;
+    --color-ink: #ebe7de;
+    --color-paper: #121110;
+    --color-surface: #1b1a17;
+    --color-line: #2e2b27;
+    --color-field: #6e685f;
+    --color-accent: #9fb3cb;
+    --color-accent-strong: #c3d0df;
+    --color-accent-soft: #1f2a36;
+    --color-on-accent: #121110;
+    --color-muted: #a49e93;
+    --color-danger: #e0886f;
+    --color-danger-soft: #3a211b;
+    --color-success: #8fbf98;
+    --color-success-soft: #1d2b20;
+    --color-warning: #d9b26a;
+    --color-warning-soft: #33291a;
+    --color-scrim: rgb(0 0 0 / 0.6);
   }
 }
 

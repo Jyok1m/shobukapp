@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ export function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [navigating, startNavigation] = useTransition();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -28,8 +29,12 @@ export function LoginForm() {
       setPending(false);
       return;
     }
-    router.push("/tableau-de-bord");
-    router.refresh();
+    // Next keeps this component's state across navigations: clear pending inside the transition, so it stays busy until the next page shows.
+    startNavigation(() => {
+      setPending(false);
+      router.push("/tableau-de-bord");
+      router.refresh();
+    });
   }
 
   return (
@@ -51,7 +56,7 @@ export function LoginForm() {
           />
         )}
       </Field>
-      <Button type="submit" loading={pending} className="mt-2 w-full">
+      <Button type="submit" loading={pending || navigating} className="mt-2 w-full">
         Se connecter
       </Button>
       <div className="flex flex-col gap-2 border-t border-line pt-4 text-center text-sm">

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense, cache, type ReactNode } from "react";
 import { DocumentBoardSections } from "@/components/documents/document-board";
 import { MembershipBadge } from "@/components/membership-badge";
+import { PortalButton } from "@/components/billing/portal-button";
 import { NotCarriedNotice } from "@/components/billing/test-mode-notices";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/page-header";
@@ -51,8 +52,9 @@ async function Greeting() {
 async function MembershipSummary() {
   await requireUser();
   const membership = await getMembership();
+  /* Not a LinkCard: the portal button cannot sit inside a link. */
   return (
-    <LinkCard href="/cotisation" title="Ma cotisation">
+    <Card title="Ma cotisation" className="h-full">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <MembershipBadge status={membership.status} />
@@ -73,8 +75,14 @@ async function MembershipSummary() {
             Votre dernier paiement n&apos;a pas abouti. Mettez à jour votre moyen de paiement.
           </p>
         )}
+        <Link href="/cotisation" className="inline-flex min-h-11 items-center self-start text-sm font-medium text-accent hover:underline sm:min-h-0">
+          Voir ma cotisation
+        </Link>
+        {membership.manageable && (
+          <PortalButton variant="secondary" label="Gérer mon compte de paiement" testMode={membership.testMode} className="mt-2" />
+        )}
       </div>
-    </LinkCard>
+    </Card>
   );
 }
 

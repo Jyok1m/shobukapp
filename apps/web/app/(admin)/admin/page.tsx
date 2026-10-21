@@ -70,7 +70,7 @@ function TileCard({ tile }: { tile: Tile }) {
       )}
     </>
   );
-  const base = "flex h-full flex-col gap-2 rounded-lg border border-line bg-surface p-5 shadow-xs sm:p-6";
+  const base = "flex h-full flex-col gap-2 rounded-lg border border-line bg-surface p-5 sm:p-6";
   if (!tile.href) return <div className={cx(base, "opacity-70")}>{body}</div>;
   return (
     <Link
