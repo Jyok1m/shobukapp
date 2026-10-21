@@ -47,6 +47,8 @@ export type MembershipView = {
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
   manageable: boolean;
+  // Test mode: the page tells members payments are simulated.
+  testMode: boolean;
   payments: {
     id: string;
     amountCents: number;
@@ -122,6 +124,7 @@ export class SubscriptionsService {
       // The portal opens as soon as a billing account exists, so a former
       // subscriber can still read their invoices.
       manageable: Boolean(client && user[MODE_FIELDS[mode].customer]),
+      testMode: mode === 'test',
       payments,
     };
   }
