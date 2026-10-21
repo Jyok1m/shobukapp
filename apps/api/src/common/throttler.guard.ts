@@ -12,9 +12,14 @@ import { SESSION_COOKIE } from '../auth/session.service';
 @Injectable()
 export class AppThrottlerGuard extends ThrottlerGuard {
   protected getTracker(req: Record<string, any>): Promise<string> {
-    const body = req.body as { email?: unknown } | undefined;
+    const body = req.body as { email?: unknown; token?: unknown } | undefined;
     if (typeof body?.email === 'string') {
       return Promise.resolve(`email:${body.email.trim().toLowerCase()}`);
+    }
+    if (typeof body?.token === 'string') {
+      return Promise.resolve(
+        `token:${createHash('sha256').update(body.token).digest('hex')}`,
+      );
     }
     const token = (req.cookies as Record<string, string> | undefined)?.[
       SESSION_COOKIE

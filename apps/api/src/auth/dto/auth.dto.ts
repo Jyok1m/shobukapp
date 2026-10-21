@@ -2,6 +2,7 @@ import { Transform } from 'class-transformer';
 import {
   Equals,
   IsEmail,
+  IsOptional,
   IsString,
   Length,
   MaxLength,
@@ -24,11 +25,29 @@ export class LoginDto {
   password!: string;
 }
 
-export class RegisterDto extends LoginDto {
+// Signup only through an invitation: a link token, or an email and a code
+// (docs/onboarding.md). The service checks that exactly one is given.
+export class RegisterDto {
+  @IsOptional()
+  @IsString()
+  @Length(43, 43)
+  token?: string;
+
+  @IsOptional()
+  @Transform(normalizeEmail)
+  @IsEmail()
+  @MaxLength(254)
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(8, 12)
+  code?: string;
+
   @IsString()
   @MinLength(10)
   @MaxLength(128)
-  declare password: string;
+  password!: string;
 
   @Transform(trim)
   @IsString()

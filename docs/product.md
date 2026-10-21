@@ -9,7 +9,7 @@ The UI is in French. This file names the screens by their French label in quotes
 | Role | How one gets it | Can |
 |---|---|---|
 | Visitor | not signed in | see the public plans, sign up, sign in |
-| `PRACTITIONER` | self signup | everything in "Practitioner features" below |
+| `PRACTITIONER` | invitation from an admin (`onboarding.md`) | everything in "Practitioner features" below |
 | `ADMIN` | `admin:grant <email>` on the server | everything a practitioner can, plus "Admin features" |
 
 "Member" means a practitioner with an `active` or `trialing` subscription. It is a **computed status**, not a role: it drives what the UI highlights (membership card, directory badge), never what the API authorizes, except where a rule below says so.
@@ -18,7 +18,7 @@ Open question: if the dojo needs a third role (for example a board member who se
 
 ## Practitioner features
 
-- Sign up with email and password, sign in, sign out ("Inscription", "Connexion").
+- Ask to join with a message and an optional trial class ("Nous rejoindre"), then sign up from the link the dojo sends. Existing practitioners activate their account with a code from the dojo ("Activation"). Sign in, sign out ("Connexion").
 - See the dojo plans and buy one through Stripe Checkout, then manage it (card, invoices, cancellation) through the Stripe Customer Portal ("Mon abonnement").
 - See the directory of members who opted in: name, photo, phone, email ("Annuaire").
 - Send and receive 1:1 messages with other members ("Messagerie").
@@ -29,6 +29,7 @@ Open question: if the dojo needs a third role (for example a board member who se
 
 ## Admin features
 
+- Read join requests, send a signup link or decline ("Demandes"); issue activation codes for existing practitioners ("Invitations").
 - CRUD on plans, synchronised with Stripe products and prices ("Formules").
 - List practitioners with their subscription status, last payment and failed payments; open a practitioner's detail ("Pratiquants").
 - Send a payment reminder to a practitioner, logged with its author and date ("Relancer").

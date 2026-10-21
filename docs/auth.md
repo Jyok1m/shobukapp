@@ -4,7 +4,7 @@ Email and password handled by the API, server-side sessions in Postgres. No JWT:
 
 ## Flow
 
-- `POST /auth/register` (email, password, first name, last name, consent to terms): creates a `PRACTITIONER`, opens a session.
+- `POST /auth/register`: invitation only, by link token or by email and code (`onboarding.md`). Creates a `PRACTITIONER`, opens a session.
 - `POST /auth/login`: same generic error for unknown email and wrong password (`invalid_credentials`), so the form does not reveal who has an account.
 - `POST /auth/logout`: deletes the session row and clears the cookie.
 - `GET /auth/me`: the current user projection (never the hash), or 401.

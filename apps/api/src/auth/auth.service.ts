@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   OnModuleInit,
@@ -9,6 +10,11 @@ import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { selfUserSelect, SelfUser } from '../common/self-user';
 import { ChangePasswordDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import {
+  hashSecret,
+  invitationStatus,
+  normalizeCode,
+} from '../onboarding/invitation-codes';
 
 // The only service allowed to select password_hash (docs/auth.md).
 @Injectable()
@@ -23,16 +29,38 @@ export class AuthService implements OnModuleInit {
   }
 
   async register(dto: RegisterDto): Promise<SelfUser> {
+    const invitation = await this.resolveInvitation(dto);
+    const passwordHash = await hash(dto.password);
     try {
-      return await this.prisma.user.create({
-        data: {
-          email: dto.email,
-          passwordHash: await hash(dto.password),
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          termsAcceptedAt: new Date(),
-        },
-        select: selfUserSelect,
+      return await this.prisma.$transaction(async (tx) => {
+        // Claimed atomically: two submissions of one link cannot both win.
+        const { count } = await tx.invitation.updateMany({
+          where: {
+            id: invitation.id,
+            usedAt: null,
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          data: { usedAt: new Date() },
+        });
+        if (!count) {
+          throw new BadRequestException({ code: 'invalid_invitation' });
+        }
+        const user = await tx.user.create({
+          data: {
+            email: invitation.email,
+            passwordHash,
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            termsAcceptedAt: new Date(),
+          },
+          select: selfUserSelect,
+        });
+        await tx.invitation.update({
+          where: { id: invitation.id },
+          data: { usedById: user.id },
+        });
+        return user;
       });
     } catch (error) {
       if (
@@ -43,6 +71,48 @@ export class AuthService implements OnModuleInit {
       }
       throw error;
     }
+  }
+
+  /*
+   * Every failure answers the same invalid_invitation: an unknown token, a
+   * wrong code, a code for another address, an expired or used invitation.
+   * A wrong code counts against every pending code of that address, which
+   * locks after MAX_FAILED_ATTEMPTS.
+   */
+  private async resolveInvitation(dto: RegisterDto) {
+    const invalid = () =>
+      new BadRequestException({ code: 'invalid_invitation' });
+    // Exactly one path: a link never comes with an email, the account takes
+    // the invitation's.
+    const byToken = Boolean(dto.token) && !dto.email && !dto.code;
+    const byCode = !dto.token && Boolean(dto.email && dto.code);
+    if (!byToken && !byCode) throw invalid();
+
+    const secret = byToken ? dto.token! : normalizeCode(dto.code!);
+    const invitation = await this.prisma.invitation.findUnique({
+      where: { tokenHash: hashSecret(secret) },
+    });
+    const matches =
+      invitation &&
+      invitation.kind === (byToken ? 'LINK' : 'CODE') &&
+      (byToken || invitation.email === dto.email) &&
+      invitationStatus(invitation) === 'PENDING';
+
+    if (!matches) {
+      if (byCode) {
+        await this.prisma.invitation.updateMany({
+          where: {
+            email: dto.email,
+            kind: 'CODE',
+            usedAt: null,
+            revokedAt: null,
+          },
+          data: { failedAttempts: { increment: 1 } },
+        });
+      }
+      throw invalid();
+    }
+    return invitation;
   }
 
   async login(dto: LoginDto): Promise<SelfUser> {

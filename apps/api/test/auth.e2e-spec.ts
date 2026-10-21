@@ -5,6 +5,7 @@ import {
   cleanupTestUsers,
   createTestApp,
   registerUser,
+  createLinkInvitation,
   TEST_PASSWORD,
   testEmail,
 } from './utils';
@@ -24,11 +25,11 @@ describe('Auth (e2e)', () => {
   });
 
   it('registers a practitioner, sets an httpOnly cookie and never returns the hash', async () => {
-    const email = testEmail();
+    const { email, token } = await createLinkInvitation(app);
     const res = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
-        email: email.toUpperCase(),
+        token,
         password: TEST_PASSWORD,
         firstName: ' Aiko ',
         lastName: 'Martin',
@@ -58,10 +59,10 @@ describe('Auth (e2e)', () => {
     expect(sessions[0].tokenHash).not.toEqual(token);
   });
 
-  it('refuses a duplicate email, a short password, missing consent and unknown fields', async () => {
-    const { email } = await registerUser(app);
+  it('refuses a short password, missing consent and unknown fields', async () => {
+    const { token } = await createLinkInvitation(app);
     const base = {
-      email: testEmail(),
+      token,
       password: TEST_PASSWORD,
       firstName: 'A',
       lastName: 'B',
@@ -69,10 +70,6 @@ describe('Auth (e2e)', () => {
     };
     const server = app.getHttpServer();
 
-    await request(server)
-      .post('/auth/register')
-      .send({ ...base, email })
-      .expect(409);
     await request(server)
       .post('/auth/register')
       .send({ ...base, password: 'short' })

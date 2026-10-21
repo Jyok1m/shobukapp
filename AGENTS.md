@@ -91,6 +91,7 @@ Read the file before touching its area. Update it in the same commit when a rule
 - `docs/architecture.md`: before adding a Nest module, a Next route group or changing how web and api talk.
 - `docs/database.md`: before touching the Prisma schema, a migration or the seed.
 - `docs/auth.md`: before touching signup, login, sessions, guards or roles.
+- `docs/onboarding.md`: before touching join requests, invitations, signup links or activation codes.
 - `docs/billing.md`: before touching plans, Stripe, Checkout, the portal, webhooks or payment reminders.
 - `docs/members.md`: before touching profiles, the directory, the members admin or the export.
 - `docs/documents.md`: before touching uploads, storage, documents or licences.

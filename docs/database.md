@@ -27,6 +27,7 @@ Switching to the real database later only changes `DATABASE_URL`, then `pnpm --f
 - The client needs a driver adapter (`@prisma/adapter-pg`).
 - The api is CommonJS: the `prisma-client` generator sets `moduleFormat = "cjs"`, else the generated files use ESM syntax the Nest build cannot load.
 - It also sets `importFileExtension = ""`. With the default `.js` suffix, `tsc` resolves the imports but ts-node (seed, `admin:grant`) and ts-jest do not, and fail with `Cannot find module './internal/class.js'`.
+- `prisma migrate dev` no longer regenerates the client in Prisma 7: run `db:generate` after it, or typecheck fails on the new models.
 - Prisma 8 is out. Staying on 7 until after the MVP: a major upgrade is its own task.
 - `generate` is a turbo task that `build`, `dev` and `typecheck` depend on: a fresh clone has no generated client, and `typecheck` would fail on it.
 
