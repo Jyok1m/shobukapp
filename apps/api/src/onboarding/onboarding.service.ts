@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -21,6 +22,12 @@ import {
   hashSecret,
   invitationStatus,
 } from './invitation-codes';
+import {
+  formatTrialDay,
+  formatTrialSlot,
+  validateTrialDates,
+  validateTrialSlot,
+} from './trial';
 
 const INVITATION_TTL_MS = 14 * 24 * 3600 * 1000;
 const PAGE_SIZE = 50;
@@ -60,8 +67,15 @@ export class OnboardingService {
       this.logger.warn('Join request dropped by the honeypot');
       return;
     }
+    const trialDates = dto.wantsTrial
+      ? validateTrialDates(dto.trialDates ?? [])
+      : [];
+    if (dto.wantsTrial && trialDates.length === 0) {
+      throw new BadRequestException({ code: 'invalid_trial_dates' });
+    }
     const request = await this.prisma.joinRequest.create({
       data: {
+        trialDates,
         firstName: dto.firstName,
         lastName: dto.lastName,
         email: dto.email,
@@ -80,7 +94,10 @@ export class OnboardingService {
         '',
         'Merci pour votre intérêt pour le Shobukan Dojo. Votre message a bien été transmis au bureau, qui vous répondra rapidement.',
         ...(dto.wantsTrial
-          ? ['', "Nous vous proposerons une date pour un cours d'essai."]
+          ? [
+              '',
+              `Pour le cours d'essai, vous avez proposé : ${trialDates.map(formatTrialDay).join(', ')}. Le bureau vous confirmera la date et l'heure.`,
+            ]
           : []),
         '',
         'À bientôt,',
@@ -97,7 +114,7 @@ export class OnboardingService {
         subject: `Nouvelle demande : ${dto.firstName} ${dto.lastName}${dto.wantsTrial ? " (cours d'essai)" : ''}`,
         text: [
           `${dto.firstName} ${dto.lastName} souhaite rejoindre le dojo.`,
-          `Cours d'essai souhaité : ${dto.wantsTrial ? 'oui' : 'non'}`,
+          `Cours d'essai souhaité : ${dto.wantsTrial ? `oui, ${trialDates.map(formatTrialDay).join(', ')}` : 'non'}`,
           '',
           `Demande à traiter : ${this.webUrl}/admin/demandes/${request.id}`,
         ].join('\n'),
@@ -154,6 +171,38 @@ export class OnboardingService {
       data: { status, handledById: admin.id, handledAt: new Date() },
     });
     return this.joinRequest(id);
+  }
+
+  // Confirms the trial class slot and tells the visitor by mail.
+  async scheduleTrial(admin: SelfUser, id: string, scheduledAt: string) {
+    const request = await this.joinRequest(id);
+    if (!request.wantsTrial) {
+      throw new BadRequestException({ code: 'no_trial_requested' });
+    }
+    const slot = validateTrialSlot(scheduledAt);
+    await this.prisma.joinRequest.update({
+      where: { id },
+      data: {
+        trialScheduledAt: slot,
+        handledById: admin.id,
+        handledAt: new Date(),
+      },
+    });
+    const delivery = await this.safeSend({
+      to: request.email,
+      subject: "Shobukan Dojo : votre cours d'essai est confirmé",
+      text: [
+        `Bonjour ${request.firstName},`,
+        '',
+        `Votre cours d'essai est confirmé le ${formatTrialSlot(slot)}.`,
+        'Adresse : 255, avenue Daumesnil, 75012 Paris.',
+        "Prévoyez une tenue souple et arrivez quelques minutes en avance. En cas d'empêchement, répondez simplement à cet e-mail.",
+        '',
+        'À bientôt sur le tatami,',
+        'Le bureau du Shobukan Dojo',
+      ].join('\n'),
+    });
+    return { ...(await this.joinRequest(id)), delivery };
   }
 
   async deleteJoinRequest(id: string): Promise<void> {

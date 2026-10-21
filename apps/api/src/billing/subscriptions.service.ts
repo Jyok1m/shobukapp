@@ -345,6 +345,59 @@ export class SubscriptionsService {
     return this.membership(user.id);
   }
 
+  private readonly portalConfigurations = new Map<StripeMode, string>();
+
+  /*
+   * Our own portal configuration, one per mode: Stripe refuses to open a portal
+   * in a mode where none was ever saved (a fresh live account), and its default
+   * would let members switch plans behind the app's back. Card, invoices,
+   * contact details and cancellation at period end; frequency changes stay in
+   * the app (docs/billing.md, Customer portal).
+   */
+  private async portalConfiguration(
+    stripe: Stripe,
+    mode: StripeMode,
+  ): Promise<string> {
+    const cached = this.portalConfigurations.get(mode);
+    if (cached) return cached;
+    const existing = await stripe.billingPortal.configurations.list({
+      active: true,
+      limit: 100,
+    });
+    const ours = existing.data.find((c) => c.metadata?.app === 'shobukapp');
+    const id =
+      ours?.id ??
+      (
+        await stripe.billingPortal.configurations.create(
+          {
+            business_profile: {
+              headline: 'Shobukan Hombu Dojo : votre cotisation',
+              privacy_policy_url: `${this.webUrl}/confidentialite`,
+            },
+            default_return_url: `${this.webUrl}/cotisation`,
+            features: {
+              customer_update: {
+                enabled: true,
+                allowed_updates: ['name', 'address', 'phone'],
+              },
+              invoice_history: { enabled: true },
+              payment_method_update: { enabled: true },
+              subscription_cancel: {
+                enabled: true,
+                mode: 'at_period_end',
+                proration_behavior: 'none',
+              },
+              subscription_update: { enabled: false },
+            },
+            metadata: { app: 'shobukapp' },
+          },
+          { idempotencyKey: `portal-configuration-${mode}-v1` },
+        )
+      ).id;
+    this.portalConfigurations.set(mode, id);
+    return id;
+  }
+
   async portal(userId: string): Promise<{ url: string }> {
     const { mode, client: stripe } = await this.stripe.requireCurrent();
     const user = await this.prisma.user.findUniqueOrThrow({
@@ -357,6 +410,7 @@ export class SubscriptionsService {
     }
     const session = await stripe.billingPortal.sessions.create({
       customer,
+      configuration: await this.portalConfiguration(stripe, mode),
       return_url: `${this.webUrl}/cotisation`,
       locale: 'fr',
     });

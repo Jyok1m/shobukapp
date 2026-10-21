@@ -1,6 +1,9 @@
 import { Transform } from 'class-transformer';
 import {
+  ArrayMaxSize,
   Equals,
+  IsArray,
+  IsDateString,
   IsBoolean,
   IsEmail,
   IsIn,
@@ -50,6 +53,13 @@ export class CreateJoinRequestDto extends PersonDto {
   @IsBoolean()
   wantsTrial!: boolean;
 
+  // Evenings the visitor can come: required with wantsTrial (service check).
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(6)
+  @IsDateString({ strict: true }, { each: true })
+  trialDates?: string[];
+
   @Equals(true)
   acceptPrivacy!: boolean;
 
@@ -81,4 +91,10 @@ export class CursorQuery {
   @IsOptional()
   @IsUUID()
   cursor?: string;
+}
+
+export class ScheduleTrialDto {
+  // ISO 8601 with offset, e.g. 2026-11-04T19:30:00+01:00.
+  @IsDateString({ strict: true })
+  scheduledAt!: string;
 }

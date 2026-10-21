@@ -300,18 +300,22 @@ model MemberExport {
 }
 
 model JoinRequest {
-  id          String            @id @default(uuid()) @db.Uuid
-  firstName   String            @map("first_name")
-  lastName    String            @map("last_name")
-  email       String
-  phone       String?
-  message     String
-  wantsTrial  Boolean           @map("wants_trial")
-  status      JoinRequestStatus @default(NEW)
-  handledById String?           @map("handled_by_id") @db.Uuid
-  handledAt   DateTime?         @map("handled_at")
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
+  id               String            @id @default(uuid()) @db.Uuid
+  firstName        String            @map("first_name")
+  lastName         String            @map("last_name")
+  email            String
+  phone            String?
+  message          String
+  wantsTrial       Boolean           @map("wants_trial")
+  // Evenings the visitor can come (the dojo is open Monday, Wednesday and
+  // Friday evenings), then the slot an admin confirms.
+  trialDates       DateTime[]        @map("trial_dates") @db.Date
+  trialScheduledAt DateTime?         @map("trial_scheduled_at")
+  status           JoinRequestStatus @default(NEW)
+  handledById      String?           @map("handled_by_id") @db.Uuid
+  handledAt        DateTime?         @map("handled_at")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
 
   handledBy  User?       @relation(fields: [handledById], references: [id], onDelete: SetNull)
   invitation Invitation?

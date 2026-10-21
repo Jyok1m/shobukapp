@@ -18,6 +18,7 @@ import {
   CreateJoinRequestDto,
   CursorQuery,
   ListJoinRequestsQuery,
+  ScheduleTrialDto,
   UpdateJoinRequestDto,
 } from './onboarding.dto';
 import { OnboardingService } from './onboarding.service';
@@ -73,6 +74,16 @@ export class AdminOnboardingController {
     @Body() dto: UpdateJoinRequestDto,
   ) {
     return this.onboarding.setJoinRequestStatus(admin, id, dto.status);
+  }
+
+  @Post('join-requests/:id/trial')
+  @HttpCode(200)
+  scheduleTrial(
+    @CurrentUser() admin: SelfUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ScheduleTrialDto,
+  ) {
+    return this.onboarding.scheduleTrial(admin, id, dto.scheduledAt);
   }
 
   @Delete('join-requests/:id')

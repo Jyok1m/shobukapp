@@ -4,11 +4,13 @@ Nobody signs up on their own. An account is always created from an invitation, w
 
 ## Future practitioners: join request, then link
 
-1. `/nous-rejoindre` (public): first name, last name, email, optional phone, a message, and "Je souhaite faire un cours d'essai". `POST /join-requests` stores a `join_requests` row (status `NEW`), acknowledges by mail to the requester and notifies every admin by mail.
+1. `/nous-rejoindre` (public): first name, last name, email, optional phone, a message, and "Je souhaite faire un cours d'essai". With a trial, the visitor picks the evenings they can come on a calendar (`trialDates`, 1 to 6 days, Monday, Wednesday or Friday only since the dojo opens those evenings, from tomorrow up to 60 days, Paris time). `POST /join-requests` stores a `join_requests` row (status `NEW`), acknowledges by mail to the requester and notifies every admin by mail.
 2. The admin reads it in `/admin/demandes`. Either declines (`PATCH /admin/join-requests/:id {status: 'DECLINED'}`, reversible to `NEW`), deletes it (GDPR), or sends a link: `POST /admin/join-requests/:id/invite` creates a `LINK` invitation, mails `${WEB_URL}/inscription?invitation=<token>` and returns the link to the admin too, so it can be handed over if the mail does not arrive.
 3. `/inscription?invitation=<token>` prefills from `GET /auth/invitations/:token` (email, names). `POST /auth/register {token, password, firstName, lastName, acceptTerms}` creates the account **with the invitation's email**: a link never comes with an email (refused if it does).
 
 Sending a link again revokes the previous one: only the latest works.
+
+**Trial class**: the admin sees the proposed evenings on the request and confirms a slot (`POST /admin/join-requests/:id/trial {scheduledAt}`, ISO with offset, on an opening day and in the future, `invalid_trial_slot` otherwise); the visitor gets a mail with the date, time and address. The admin can also simply answer by mail (the reply goes to the dojo inbox). Opening days live in `apps/api/src/onboarding/trial.ts` (`OPEN_DAYS`) and their web twin: change both.
 
 ## Existing practitioners: email and code
 

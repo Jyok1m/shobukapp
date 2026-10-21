@@ -42,7 +42,7 @@ A cotisation (a plan, "Adulte", "Étudiant") can be paid **yearly, quarterly or 
 
 - `GET /billing/plans` is public: the plans page shows before signup.
 - `POST /billing/checkout { planId }` refuses with `already_subscribed` if a subscription is live or late, checked in our table **and at Stripe** (our table only fills on webhook: two tabs could otherwise open two subscriptions). Then it creates a Checkout Session in `subscription` mode for the user's Stripe customer (created on first need, id stored on `users`). Returns the URL, the browser redirects.
-- `POST /billing/portal` returns a Customer Portal URL: card, invoices, cancellation. No card form on our side, which keeps us out of PCI scope. `manageable` (the button) is true once the member has a subscription or a payment in the current mode: a former member still reads their invoices, someone who only abandoned a checkout has nothing to manage.
+- `POST /billing/portal` returns a Customer Portal URL, opened with **our own portal configuration** per mode (`metadata.app = shobukapp`, created on first use, idempotent): card, invoices, name, address and phone, cancellation at period end, no plan switching (frequency changes stay in the app). Stripe refuses a portal in a mode where no configuration was ever saved, which a fresh live account is. No card form on our side, which keeps us out of PCI scope. `manageable` (the button) is true once the member has a subscription or a payment in the current mode: a former member still reads their invoices, someone who only abandoned a checkout has nothing to manage.
 - Success and cancel URLs are built server-side from `WEB_URL`, never received from the browser (open redirect).
 
 ## Webhook

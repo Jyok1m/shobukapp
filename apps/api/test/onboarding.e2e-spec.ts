@@ -11,6 +11,14 @@ import {
   testEmail,
 } from './utils';
 
+// The first opening evening (Monday, Wednesday or Friday) after tomorrow.
+function nextOpenDay(): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 2);
+  while (![1, 3, 5].includes(d.getUTCDay())) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 const signup = (extra: object) => ({
   password: TEST_PASSWORD,
   firstName: 'Kenji',
@@ -63,6 +71,7 @@ describe('Onboarding (e2e)', () => {
         email,
         message: 'Bonjour, je voudrais découvrir le kendo à la rentrée.',
         wantsTrial: true,
+        trialDates: [nextOpenDay()],
         acceptPrivacy: true,
       })
       .expect(202);
@@ -116,6 +125,57 @@ describe('Onboarding (e2e)', () => {
       status: 'INVITED',
       invitation: { status: 'USED' },
     });
+  });
+
+  it('takes trial evenings on opening days only, then lets an admin confirm a slot', async () => {
+    const server = app.getHttpServer();
+    // The next Monday, Wednesday or Friday after tomorrow, and a Tuesday.
+    const day = (weekday: number) => {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + 2);
+      while (d.getUTCDay() !== weekday) d.setUTCDate(d.getUTCDate() + 1);
+      return d.toISOString().slice(0, 10);
+    };
+    const base = {
+      firstName: 'Mei',
+      lastName: 'Kato',
+      message: "J'aimerais essayer l'iaido un soir de la semaine.",
+      wantsTrial: true,
+      acceptPrivacy: true,
+    };
+    await request(server)
+      .post('/join-requests')
+      .send({ ...base, email: testEmail() })
+      .expect(400);
+    await request(server)
+      .post('/join-requests')
+      .send({ ...base, email: testEmail(), trialDates: [day(2)] })
+      .expect(400);
+    const email = testEmail();
+    await request(server)
+      .post('/join-requests')
+      .send({ ...base, email, trialDates: [day(1), day(3), day(5)] })
+      .expect(202);
+
+    const stored = await prisma.joinRequest.findFirstOrThrow({
+      where: { email },
+    });
+    expect(stored.trialDates).toHaveLength(3);
+
+    const route = `/admin/join-requests/${stored.id}/trial`;
+    await request(server)
+      .post(route)
+      .set('Cookie', admin.cookie)
+      .send({ scheduledAt: `${day(2)}T19:30:00+01:00` })
+      .expect(400);
+    const confirmed = await request(server)
+      .post(route)
+      .set('Cookie', admin.cookie)
+      .send({ scheduledAt: `${day(3)}T19:30:00+01:00` })
+      .expect(200);
+    expect(
+      (confirmed.body as { trialScheduledAt: string }).trialScheduledAt,
+    ).toBeTruthy();
   });
 
   it('drops honeypot submissions silently', async () => {
@@ -224,6 +284,7 @@ describe('Onboarding (e2e)', () => {
           .send({ status: 'DECLINED' }),
       () => request(server).delete(`/admin/join-requests/${id}`),
       () => request(server).post(`/admin/join-requests/${id}/invite`),
+      () => request(server).post(`/admin/join-requests/${id}/trial`).send({}),
       () => request(server).get('/admin/invitations'),
       () => request(server).post('/admin/invitations').send({}),
       () => request(server).delete(`/admin/invitations/${id}`),
