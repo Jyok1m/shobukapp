@@ -43,27 +43,28 @@ const MEMBERS = [
   },
 ];
 
+// The dojo's 2026/2027 grid (1 unité = 1 discipline, once a week). One-time
+// fees (entrance, FFJDA licence, sports passport) are not cotisations.
 const PLANS = [
-  {
-    name: 'Adulte',
-    description: 'Accès à tous les cours adultes pour la saison.',
-    sortOrder: 0,
-    prices: [
-      { frequency: 'YEAR' as const, amountCents: 25000 },
-      { frequency: 'QUARTER' as const, amountCents: 7000 },
-      { frequency: 'MONTH' as const, amountCents: 2500 },
-    ],
-  },
-  {
-    name: 'Étudiant',
-    description: 'Sur présentation de la carte étudiante.',
-    sortOrder: 1,
-    prices: [
-      { frequency: 'YEAR' as const, amountCents: 15000 },
-      { frequency: 'MONTH' as const, amountCents: 1500 },
-    ],
-  },
-];
+  { name: 'Adulte · 1 unité par semaine', quarter: 24000, year: 73500 },
+  { name: 'Adulte · 2 unités par semaine', quarter: 33000, year: 99600 },
+  { name: 'Adulte · 3 unités par semaine', quarter: 37500, year: 110400 },
+  { name: 'Adulte · à volonté', quarter: 45000, year: 132000 },
+  { name: 'Enfant (jusqu’à 14 ans) · 1 unité par semaine', quarter: 14500 },
+  { name: 'Enfant (jusqu’à 14 ans) · 2 unités par semaine', quarter: 19500 },
+].map((plan, sortOrder) => ({
+  name: plan.name,
+  description: plan.name.startsWith('Enfant')
+    ? 'Iaido, kendo, battodo, jojutsu ou fuzokubudo. Droit d’entrée annuel : 45 €.'
+    : 'Iaido, kendo, battodo, jojutsu ou fuzokubudo. Droit d’entrée annuel : 60 €.',
+  sortOrder,
+  prices: [
+    ...(plan.year
+      ? [{ frequency: 'YEAR' as const, amountCents: plan.year }]
+      : []),
+    { frequency: 'QUARTER' as const, amountCents: plan.quarter },
+  ],
+}));
 
 async function main() {
   const prisma = scriptPrisma('local');
