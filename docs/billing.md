@@ -42,4 +42,4 @@ Stripe holds prices, cards, invoices and retries. The database holds a mirror go
 
 - `APP_ENV` decides the allowed Stripe mode: a `sk_live_` key outside `production` and a `sk_test_` key inside it stop the boot.
 - Without `STRIPE_SECRET_KEY`, billing routes answer 503 `billing_disabled` and the plans page hides purchase buttons. The rest of the app works.
-- A key without `STRIPE_WEBHOOK_SECRET` also stops the boot: we would sell subscriptions nothing records.
+- In production, a key without `STRIPE_WEBHOOK_SECRET` stops the boot: we would sell subscriptions nothing records. In development it only disables the webhook route (503), since the secret comes from `stripe listen` once the API runs.

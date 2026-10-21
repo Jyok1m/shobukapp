@@ -25,7 +25,9 @@ Switching to the real database later only changes `DATABASE_URL`, then `pnpm --f
 
 - The connection URL lives in `apps/api/prisma.config.ts`, not in the `datasource` block, and Prisma no longer loads `.env` by itself: the config file imports `dotenv/config`.
 - The client needs a driver adapter (`@prisma/adapter-pg`).
-- The api is CommonJS: the `prisma-client` generator must set `moduleFormat = "cjs"`, else the generated files use ESM syntax the Nest build cannot load.
+- The api is CommonJS: the `prisma-client` generator sets `moduleFormat = "cjs"`, else the generated files use ESM syntax the Nest build cannot load.
+- It also sets `importFileExtension = ""`. With the default `.js` suffix, `tsc` resolves the imports but ts-node (seed, `admin:grant`) and ts-jest do not, and fail with `Cannot find module './internal/class.js'`.
+- Prisma 8 is out. Staying on 7 until after the MVP: a major upgrade is its own task.
 - `generate` is a turbo task that `build`, `dev` and `typecheck` depend on: a fresh clone has no generated client, and `typecheck` would fail on it.
 
 ## Model (MVP draft)
@@ -56,4 +58,4 @@ messages         id, sender_id, recipient_id, body, read_at, created_at
 
 ## Seed
 
-`pnpm --filter @shobukapp/api db:seed` creates demo data for presentations: two plans (no Stripe ids, they are synced on first admin save), a handful of practitioners with fake names, directory opt-ins and messages. Never real people. The admin is not seeded: it is granted with `admin:grant`.
+`pnpm --filter @shobukapp/api db:seed` (idempotent) creates demo data for presentations: two plans (no Stripe ids, they are synced on first admin save), a handful of practitioners with fake names, directory opt-ins and messages. Never real people. Every seeded account uses the password `shobukan-demo`. The admin is not seeded: it is granted with `admin:grant`.
