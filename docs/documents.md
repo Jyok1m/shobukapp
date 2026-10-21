@@ -14,16 +14,18 @@
 - `GET /documents`, `POST /documents` (multipart), `PATCH /documents/:id` (title, valid until), `DELETE /documents/:id`, `GET /documents/:id/file`.
 - Only the owner and admins can read a member document. A practitioner asking for someone else's document gets 404, not 403: no existence oracle.
 - `MEDICAL_CERTIFICATE` carries `valid_until`. The admin list shows missing or expired certificates.
-- Deleting a document deletes the stored file, then the row.
+- Deleting a document deletes the row, then the stored file (same reason as erasure, `privacy.md`).
 
 ## Dojo documents ("Documents du dojo", admin)
 
-- Same table with `owner_id = null` and category `LEGAL`, `ACCOUNTING` or `OTHER`.
-- `/admin/documents` CRUD, admins only. Open question: should practitioners read legal documents (statuts, règlement intérieur)? Likely yes, through a `shared_with_members` flag; not in the MVP.
+- Same table with `owner_id = null` and category `LEGAL`, `ACCOUNTING` or `OTHER`. A member can only create `MEDICAL_CERTIFICATE` or `OTHER` for themself.
+- `GET /admin/documents/members/:userId` lists a member's documents for admins (to check certificates); files are read through the same `/documents/:id/file`.
+- `GET /admin/documents` and `POST /admin/documents` (multipart), admins only. Renaming and deleting a dojo document go through `PATCH` and `DELETE /documents/:id`, which allow an admin on any document. Open question: should practitioners read legal documents (statuts, règlement intérieur)? Likely yes, through a `shared_with_members` flag; not in the MVP.
 
 ## FFK licences
 
 - One row per user and season (`unique(user_id, season)`), uploaded by an admin with the licence number and the PDF.
-- `GET /licenses` for the member, `GET /licenses/:id/file`; `/admin/licenses` CRUD for admins.
-- Re-uploading for the same season replaces the file and keeps the row.
+- `GET /licenses` for the member, `GET /licenses/:id/file`; `GET /admin/licenses?userId=`, `POST /admin/licenses` (multipart: userId, season `YYYY-YYYY`, number, optional file: upsert on user and season), `DELETE /admin/licenses/:id` for admins. Licence mime types are sniffed on read, the table has no mime column.
+- Re-uploading for the same season replaces the file (the old one is removed) and keeps the row.
+- Download filenames are built from the title, ASCII only, with an extension derived from the sniffed type: an uploaded filename is never reused.
 - The legal information needed to request a licence comes from the profile (`members.md`). Generating the FFK request automatically is out of scope.

@@ -14,7 +14,7 @@ The dojo is the data controller. This app processes identity, contact, licence i
 ## Rights
 
 - Access and portability: the member can download their own data (profile, documents, licences, messages) as a zip. Not in the MVP; the admin export covers urgent requests.
-- Erasure: account deletion cancels the Stripe subscription first (else the person keeps being charged), deletes stored files, then the user row and what cascades from it (sessions, documents, messages sent). Accounting records required by law (invoices) stay at Stripe.
+- Erasure (`ErasureService`, used by the admin today and by self-deletion later): cancels the Stripe subscription first (else the person keeps being charged; one already missing at Stripe counts as cancelled), then deletes the user row and what cascades from it (sessions, documents, licences, messages), then the stored files. Row before files: a failed file removal leaves an orphan file, never a row pointing to nothing. A Stripe failure aborts before any data is touched. Accounting records required by law (invoices) stay at Stripe.
 
 ## To decide with the dojo before production
 
