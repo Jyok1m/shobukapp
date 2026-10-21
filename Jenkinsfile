@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    // Every build shares the one dind daemon, and two at once exceed its
+    // memory. The lock name is common to every project on this Jenkins.
+    options {
+        lock('dind')
+    }
+
     environment {
         DOCKER_NS     = 'jyok1m'
         WEB_IMAGE     = "${DOCKER_NS}/shobukapp-web"
@@ -8,6 +14,10 @@ pipeline {
         MIGRATE_IMAGE = "${DOCKER_NS}/shobukapp-migrate"
         DOCKER_TAG    = "${env.BRANCH_NAME}"
         SSH_HOST = "host.docker.internal"
+        // One config.json per build: a shared one lets another build's logout
+        // sign this one out mid-push. Outside the workspace, which the node
+        // containers mount.
+        DOCKER_CONFIG = "${env.WORKSPACE_TMP}/docker"
         PLATFORM = 'linux/amd64'
 
         // Same image as the Dockerfiles: testing on another node version than
@@ -236,7 +246,7 @@ pipeline {
                         printf '%s' "$DOCKER_PASS" | ssh -i "$SSH_KEY" -p "$HOST_PORT" \
                             -o StrictHostKeyChecking=no \
                             "$SSH_USER@$SSH_HOST" \
-                            "trap 'docker logout >/dev/null 2>&1' EXIT; \
+                            "export DOCKER_CONFIG=\\$(mktemp -d); trap 'rm -rf \\$DOCKER_CONFIG' EXIT; \
                             docker login -u '$DOCKER_USER' --password-stdin && \
                             docker compose -f /opt/shobukapp/docker-compose.yml --profile tools pull $SERVICES $MIGRATE && \
                             docker compose -f /opt/shobukapp/docker-compose.yml --profile tools run --rm $MIGRATE && \
