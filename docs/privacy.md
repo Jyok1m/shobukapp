@@ -4,7 +4,7 @@ The dojo is the data controller. This app processes identity, contact, licence i
 
 ## Rules
 
-- **Minimisation**: a field is collected only if the FFK licence, the membership or the dojo's insurance needs it.
+- **Minimisation**: a field is collected only if the FFJDA licence, the membership or the dojo's insurance needs it.
 - **Health data** (article 9): medical certificates are readable by their owner and admins only, excluded from the directory and from exports, and stored in the private storage without public URL.
 - **Directory**: opt-in, unchecked by default, revocable at any time from the profile. Admins cannot toggle it.
 - **Exports**: CSV of members for admins only, logged. Never passwords, never medical documents.

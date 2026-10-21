@@ -69,7 +69,7 @@ export function certificateState(certificate: { validUntil: string | null } | nu
   return { label: `Valide jusqu'au ${formatCalendarDate(certificate.validUntil)}`, tone: "success" };
 }
 
-/* FFK seasons run September to August. */
+/* FFJDA seasons run September to August. */
 export function currentSeason(): string {
   const [year, month] = todayInParis().split("-").map(Number);
   return month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;

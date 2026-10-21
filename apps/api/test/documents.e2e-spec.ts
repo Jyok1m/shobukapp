@@ -182,7 +182,7 @@ describe('Documents and licences (e2e)', () => {
       .set('Cookie', admin.cookie)
       .field('userId', member.id)
       .field('season', '2026-2027')
-      .field('number', 'FFK-001')
+      .field('number', 'FFJDA-001')
       .attach('file', PDF, {
         filename: 'licence.pdf',
         contentType: 'application/pdf',
@@ -193,7 +193,7 @@ describe('Documents and licences (e2e)', () => {
       .set('Cookie', admin.cookie)
       .field('userId', member.id)
       .field('season', '2026-2027')
-      .field('number', 'FFK-002')
+      .field('number', 'FFJDA-002')
       .attach('file', PDF, {
         filename: 'licence.pdf',
         contentType: 'application/pdf',
@@ -210,7 +210,7 @@ describe('Documents and licences (e2e)', () => {
       expect.objectContaining({
         id,
         season: '2026-2027',
-        number: 'FFK-002',
+        number: 'FFJDA-002',
         hasFile: true,
       }),
     ]);

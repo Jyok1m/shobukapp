@@ -64,14 +64,14 @@ const copy = {
   self: {
     identity: "Votre adresse e-mail ne peut pas être modifiée ici.",
     licence:
-      "Nécessaires pour établir votre licence FFK. Visibles uniquement par vous et les administrateurs du dojo.",
+      "Nécessaires pour établir votre licence FFJDA. Visibles uniquement par vous et les administrateurs du dojo.",
     firstNameRequired: "Indiquez votre prénom.",
     lastNameRequired: "Indiquez votre nom.",
     submit: "Enregistrer mon profil",
   },
   admin: {
     identity: "L'adresse e-mail et le mot de passe restent gérés par le membre.",
-    licence: "Nécessaires pour établir la licence FFK. Visibles uniquement par le membre et les administrateurs du dojo.",
+    licence: "Nécessaires pour établir la licence FFJDA. Visibles uniquement par le membre et les administrateurs du dojo.",
     firstNameRequired: "Indiquez le prénom.",
     lastNameRequired: "Indiquez le nom.",
     submit: "Enregistrer le profil",
@@ -153,7 +153,7 @@ export function ProfileForm({ user, memberId }: { user: SelfUser; memberId?: str
       </Card>
 
       <Card
-        title="Informations pour la licence FFK"
+        title="Informations pour la licence FFJDA"
         description={text.licence}
       >
         <div className="grid gap-4 sm:grid-cols-2">

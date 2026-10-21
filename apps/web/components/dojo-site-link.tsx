@@ -1,6 +1,8 @@
 import { cx } from "@/lib/cx";
 
-export const DOJO_SITE_URL = "https://www.shobukan-dojo.com";
+import { DOJO } from "@/lib/dojo";
+
+export const DOJO_SITE_URL = DOJO.website;
 
 /* External link to the club's public website: new tab, no opener, no referrer. */
 export function DojoSiteLink({ className, label = "Site du Shobukan Dojo" }: { className?: string; label?: string }) {

@@ -102,7 +102,7 @@ export class UpsertLicenseDto {
   @IsUUID()
   userId!: string;
 
-  // FFK seasons run September to August: "2026-2027".
+  // FFJDA seasons run September to August: "2026-2027".
   @Matches(/^\d{4}-\d{4}$/)
   season!: string;
 

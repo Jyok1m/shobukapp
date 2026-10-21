@@ -15,6 +15,16 @@ type SmtpConfig = {
   password: string;
 };
 
+const SIGNATURE = [
+  '',
+  '',
+  '--',
+  'Shobukan Hombu Dojo',
+  '255, avenue Daumesnil, 75012 Paris',
+  '01 43 07 05 65 · info@shobukan-dojo.com',
+  'https://www.shobukan-dojo.com',
+].join('\n');
+
 export type Mail = { to: string; subject: string; text: string };
 
 // Without SMTP_HOST, mails are logged instead of sent: the demo works without a
@@ -24,6 +34,7 @@ export class MailService {
   private readonly logger = new Logger(MailService.name);
   private readonly transport: Transporter | null;
   private readonly from: string;
+  private readonly replyTo: string;
 
   constructor(config: ConfigService) {
     const smtp = config.get<SmtpConfig | null>('smtp');
@@ -39,6 +50,7 @@ export class MailService {
         })
       : null;
     this.from = config.getOrThrow<string>('mailFrom');
+    this.replyTo = config.getOrThrow<string>('mailReplyTo');
   }
 
   async send(mail: Mail): Promise<'sent' | 'logged'> {
@@ -48,7 +60,12 @@ export class MailService {
       );
       return 'logged';
     }
-    await this.transport.sendMail({ from: this.from, ...mail });
+    await this.transport.sendMail({
+      from: this.from,
+      replyTo: this.replyTo,
+      ...mail,
+      text: `${mail.text}${SIGNATURE}`,
+    });
     return 'sent';
   }
 }

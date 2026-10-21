@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Brand } from "@/components/brand";
+import { DojoContact } from "@/components/dojo-contact";
 import { DojoSiteLink } from "@/components/dojo-site-link";
+import { DOJO } from "@/lib/dojo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonClasses } from "@/components/ui/button";
 
@@ -28,12 +30,20 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
       <main className="flex flex-1 flex-col">{children}</main>
-      <footer className="flex flex-col items-center gap-2 border-t border-line px-4 py-6 text-center text-xs text-muted sm:flex-row sm:justify-center sm:gap-4">
-        <span>Shobukan Dojo, club de kendo</span>
-        <DojoSiteLink className="min-h-10 font-medium text-accent hover:underline sm:min-h-0" />
-        <Link href="/confidentialite" className="inline-flex min-h-10 items-center underline-offset-2 hover:text-ink hover:underline sm:min-h-0">
-          Confidentialité et cookies
-        </Link>
+      <footer className="border-t border-line px-4 py-6 text-xs text-muted">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:justify-between sm:text-left">
+          <div className="flex flex-col gap-1">
+            <span className="font-medium text-ink">{DOJO.name}</span>
+            <span>{DOJO.disciplines}</span>
+          </div>
+          <DojoContact compact className="items-center sm:items-start" />
+          <div className="flex flex-col items-center gap-1 sm:items-end">
+            <DojoSiteLink className="min-h-10 font-medium text-accent hover:underline sm:min-h-0" />
+            <Link href="/confidentialite" className="inline-flex min-h-10 items-center underline-offset-2 hover:text-ink hover:underline sm:min-h-0">
+              Confidentialité et cookies
+            </Link>
+          </div>
+        </div>
       </footer>
     </div>
   );

@@ -260,7 +260,7 @@ export class DocumentsService {
     return {
       stream: Readable.from(buffer),
       mimeType,
-      filename: safeFilename(`licence-ffk-${license.season}`, mimeType),
+      filename: safeFilename(`licence-ffjda-${license.season}`, mimeType),
     };
   }
 

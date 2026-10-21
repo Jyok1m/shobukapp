@@ -83,7 +83,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
 
   return (
     <Card
-      title="Licences FFK"
+      title="Licences FFJDA"
       description="Une licence par saison. Enregistrer une saison existante remplace son numéro, et son fichier si vous en joignez un."
     >
       <div className="flex flex-col gap-6">

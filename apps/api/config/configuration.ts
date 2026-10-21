@@ -91,5 +91,7 @@ export default () => {
     smtp: smtp(),
     mailFrom:
       process.env.MAIL_FROM ?? 'Shobukan Dojo <no-reply@joachimjasmin.com>',
+    // Replies to a no-reply address reach the dojo's own inbox.
+    mailReplyTo: process.env.MAIL_REPLY_TO ?? 'info@shobukan-dojo.com',
   };
 };

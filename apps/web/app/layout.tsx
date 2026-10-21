@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     default: "Shobukan Dojo",
     template: "%s | Shobukan Dojo",
   },
-  description: "Espace membres du Shobukan Dojo, club de kendo.",
+  description: "Espace membres du Shobukan Hombu Dojo, Paris 12e : iaido, kendo, battodo, jojutsu, fuzokubudo.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

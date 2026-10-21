@@ -2,7 +2,7 @@
 
 ## Profile ("Mon profil")
 
-- `GET /me`, `PATCH /me`: identity (first name, last name, phone, photo) and FFK licence information (birth date, sex, nationality, address, emergency contact). Email change and password change are separate routes, both asking for the current password.
+- `GET /me`, `PATCH /me`: identity (first name, last name, phone, photo) and FFJDA licence information (birth date, sex, nationality, address, emergency contact). Email change and password change are separate routes, both asking for the current password.
 - The photo is uploaded through the storage service (`documents.md`), images only (JPEG, PNG, WebP), 5 MB max, served through `/members/:id/photo`.
 - `directory_visible` is toggled here by the member only.
 - Photos are cached `private, max-age=300`: after leaving the directory, a photo can stay visible in another member's browser for up to five minutes. Accepted limit.
@@ -12,6 +12,10 @@
 - `GET /members?cursor=`: only users with `directory_visible = true`, through a projection carrying first name, last name, photo, phone, email. Never birth date, address, emergency contact, documents, payments.
 - The projection is a dedicated `select`, not a filtered object: a field the select does not carry cannot leak.
 - Requires a session. Open question: should it require an active membership too? Current choice: any signed-in practitioner, since a trial practitioner needs to reach the instructors.
+
+## Mail
+
+Every mail is sent from `no-reply@joachimjasmin.com` with `Reply-To: info@shobukan-dojo.com` (`MAIL_REPLY_TO`), so a member answering reaches the dojo, and ends with the dojo's signature (address, phone, e-mail, website).
 
 ## Admin ("Membres", "Pratiquants")
 

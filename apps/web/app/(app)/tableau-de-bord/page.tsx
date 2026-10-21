@@ -110,7 +110,7 @@ async function ProfileSummary() {
         <p className="text-sm text-muted">
           {complete
             ? "Votre profil est complet."
-            : `${filled} informations sur ${total} renseignées. Complétez votre profil pour votre licence FFK.`}
+            : `${filled} informations sur ${total} renseignées. Complétez votre profil pour votre licence FFJDA.`}
         </p>
       </div>
     </LinkCard>

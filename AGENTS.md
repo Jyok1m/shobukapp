@@ -1,6 +1,8 @@
 # ShobukApp
 
-Member management SaaS for the Shobukan Dojo (kendo, https://www.shobukan-dojo.com). Practitioners sign up, buy and manage their membership, keep their documents and licences up to date and talk to each other. Administrators manage plans, payments, members, legal and accounting documents and Fédération Française de Kendo licences.
+Member management SaaS for the Shobukan Hombu Dojo (iaido, kendo, battodo, jojutsu, fuzokubudo; 255, avenue Daumesnil, 75012 Paris; https://www.shobukan-dojo.com). Practitioners sign up, buy and manage their membership, keep their documents and licences up to date and talk to each other. Administrators manage plans, payments, members, legal and accounting documents and licences, which are issued by the **FFJDA** (Fédération Française de Judo, Jujitsu, Kendo et Disciplines Associées), never "FFK".
+
+The dojo's public details (address, phone 01 43 07 05 65, info@shobukan-dojo.com, website) live in `apps/web/lib/dojo.ts` for the UI and in the mail signature of `MailService` for e-mails: change both together.
 
 Product scope and roles: `docs/product.md`. Tonight's MVP plan: `docs/mvp-plan.md`.
 

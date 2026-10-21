@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Brand } from "@/components/brand";
+import { DojoContact } from "@/components/dojo-contact";
 import { DojoSiteLink } from "@/components/dojo-site-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cx } from "@/lib/cx";
@@ -92,7 +93,10 @@ export function AppShell({
           <NavList items={adminNav} pathname={pathname} onNavigate={close} badges={{ "/admin/demandes": { count: newRequests, label: newRequestsLabel } }} />
         </div>
       )}
-      <DojoSiteLink className="min-h-11 rounded-md px-3 text-sm text-muted hover:bg-ink/5 hover:text-ink lg:min-h-9" />
+      <div className="flex flex-col gap-1 border-t border-line pt-3">
+        <DojoSiteLink className="min-h-11 rounded-md px-3 text-sm text-muted hover:bg-ink/5 hover:text-ink lg:min-h-9" />
+        <DojoContact compact className="px-3 text-xs text-muted" />
+      </div>
     </nav>
   );
 

@@ -2,6 +2,10 @@
 
 Stripe holds prices, cards, invoices and retries. The database holds a mirror good enough to list, filter and decide access.
 
+## The dojo's grid (2026/2027)
+
+Cotisations are per number of weekly units (1 unité = 1 discipline once a week): adults 1, 2, 3 units or unlimited, quarterly or yearly; children (up to 14) 1 or 2 units, quarterly only. The seed reproduces it. Not handled online yet: the annual entrance fee (60 € adult, 45 € child), the FFJDA licence and insurance (56 €), the sports passport (10 €, valid 8 years), private lessons and drop-in classes; the landing says they are paid at the dojo.
+
 ## Frequencies
 
 A cotisation (a plan, "Adulte", "Étudiant") can be paid **yearly, quarterly or monthly**. Each frequency it offers is a row of `plan_prices` with its own amount, chosen freely by the admin (a discount on the yearly one is just a lower amount), and its own Stripe price per mode. The member picks the cotisation, then the frequency, at checkout (`POST /billing/checkout {planId, frequency}`).

@@ -2,7 +2,9 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { PlanCard, PlanGrid, PriceList } from "@/components/billing/plan-card";
+import { DojoContact } from "@/components/dojo-contact";
 import { DojoSiteLink } from "@/components/dojo-site-link";
+import { DOJO } from "@/lib/dojo";
 import { buttonClasses } from "@/components/ui/button";
 import { publicApiGet } from "@/lib/api";
 import type { PublicPlan } from "@/lib/types";
@@ -38,7 +40,8 @@ export default function HomePage() {
       <section className="flex max-w-3xl flex-col gap-8">
         <div className="flex flex-col gap-4">
           <p className="text-sm font-medium tracking-widest text-accent uppercase">Espace membres</p>
-          <h1 className="font-serif text-4xl font-bold text-ink sm:text-5xl">Shobukan Dojo</h1>
+          <h1 className="font-serif text-4xl font-bold text-ink sm:text-5xl">Shobukan Hombu Dojo</h1>
+          <p className="text-sm font-medium text-ink">{DOJO.disciplines}</p>
           <p className="max-w-xl text-lg text-muted">
             Votre adhésion, vos documents, vos licences et les autres pratiquants du dojo, réunis au même
             endroit. Écrivez-nous pour découvrir le dojo, puis choisissez votre formule et gardez votre dossier à jour.
@@ -67,6 +70,16 @@ export default function HomePage() {
         <Suspense fallback={<p className="text-sm text-muted">Chargement des formules…</p>}>
           <Plans />
         </Suspense>
+        <p className="text-xs text-muted">
+          En plus de la cotisation : le droit d&apos;entrée annuel et la licence-assurance FFJDA, réglés auprès du dojo.
+        </p>
+      </section>
+
+      <section className="flex flex-col gap-4" aria-labelledby="contact-title">
+        <h2 id="contact-title" className="font-serif text-2xl font-bold text-ink">
+          Nous trouver
+        </h2>
+        <DojoContact className="text-sm text-muted" />
       </section>
     </div>
   );

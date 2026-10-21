@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { DojoContact } from "@/components/dojo-contact";
+import { DOJO } from "@/lib/dojo";
 
 export const metadata: Metadata = { title: "Confidentialité et cookies" };
 
@@ -18,18 +20,19 @@ export default function PrivacyPage() {
     <article className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-12 sm:px-6">
       <header className="flex flex-col gap-2">
         <h1 className="font-serif text-3xl font-bold text-ink">Confidentialité et cookies</h1>
-        <p className="text-sm text-muted">Comment le Shobukan Dojo traite vos données dans l&apos;espace membres.</p>
+        <p className="text-sm text-muted">Comment le Shobukan Hombu Dojo traite vos données dans l&apos;espace membres.</p>
       </header>
 
       <Section title="Responsable du traitement">
-        <p>Le Shobukan Dojo, club de kendo, représenté par son bureau.</p>
+        <p>Le {DOJO.name}, représenté par son bureau :</p>
+        <DojoContact />
       </Section>
 
       <Section title="Données collectées">
         <ul className="list-disc space-y-1 pl-5">
           <li>Identité : nom, prénom, photo si vous en ajoutez une.</li>
           <li>Coordonnées : adresse e-mail, téléphone, adresse postale, personne à prévenir en cas d&apos;urgence.</li>
-          <li>Informations pour la licence FFK : date de naissance, sexe, nationalité, numéro de licence.</li>
+          <li>Informations pour la licence FFJDA : date de naissance, sexe, nationalité, numéro de licence.</li>
           <li>
             Certificat médical : le document et sa date de validité, visibles uniquement par vous et les
             administrateurs du dojo.
@@ -45,7 +48,7 @@ export default function PrivacyPage() {
 
       <Section title="Finalités">
         <p>
-          Gérer votre adhésion et votre cotisation, établir votre licence auprès de la FFK, vérifier votre aptitude
+          Gérer votre adhésion et votre cotisation, établir votre licence auprès de la FFJDA, vérifier votre aptitude
           médicale à la pratique, vous contacter, et permettre les échanges entre membres. L&apos;annuaire des membres
           est facultatif : vous n&apos;y apparaissez que si vous l&apos;activez dans votre profil.
         </p>
@@ -59,8 +62,11 @@ export default function PrivacyPage() {
       <Section title="Vos droits">
         <p>
           Vous pouvez accéder à vos données, les rectifier ou demander leur effacement. La plupart se modifient
-          directement depuis « Mon profil ». Pour toute autre demande, contactez le bureau du dojo. Vous pouvez aussi
-          adresser une réclamation à la CNIL.
+          directement depuis « Mon profil ». Pour toute autre demande, écrivez au bureau du dojo à{" "}
+          <a href={`mailto:${DOJO.email}`} className="font-medium text-accent underline underline-offset-2">
+            {DOJO.email}
+          </a>
+          . Vous pouvez aussi adresser une réclamation à la CNIL.
         </p>
       </Section>
 
