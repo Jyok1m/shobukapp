@@ -61,7 +61,7 @@ function MembershipCard({ membership, plan }: { membership: Membership; plan: Pu
       {/* Only an active cotisation of the current mode can change frequency (docs/billing.md). */}
       {plan && frequency && (status === "active" || status === "trialing") && !cancelAtPeriodEnd && (
         <div className="mt-4">
-          <FrequencyChange current={frequency} prices={plan.prices} currency={plan.currency} />
+          <FrequencyChange current={frequency} prices={plan.prices} currency={plan.currency} testMode={membership.testMode} />
         </div>
       )}
       {isMember && cancelAtPeriodEnd && (

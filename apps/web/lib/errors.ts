@@ -29,6 +29,7 @@ export const apiErrorMessages: Record<string, string> = {
   duplicate_frequency: "Chaque fréquence de paiement ne peut apparaître qu'une fois par formule.",
   no_active_cotisation: "Vous n'avez pas de cotisation en cours à modifier.",
   same_frequency: "C'est déjà votre fréquence de paiement actuelle.",
+  payment_declined: "Le paiement a été refusé : votre fréquence actuelle est conservée.",
   frequency_not_offered: "Cette fréquence n'est plus proposée pour votre cotisation.",
   not_publishable: "Ce document ne peut pas être publié : seuls les documents du dojo peuvent l'être.",
   invalid_invitation: "Ce lien ou ce code d'inscription n'est plus valable.",

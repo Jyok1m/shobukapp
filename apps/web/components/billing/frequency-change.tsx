@@ -12,9 +12,9 @@ import type { Frequency, FrequencyPreview, Membership, PublicPlanPrice } from "@
 
 type Step = "closed" | "choose" | "confirm";
 
-/* A declined card leaves the current frequency in place (payment_behavior pending_if_incomplete). */
+/* The API answers 402 payment_declined when Stripe left the change pending; other Stripe errors keep their generic text. */
 function frequencyError(result: { code: string | null; error: string }): string {
-  if (result.code === "stripe_error") return "Le paiement a été refusé : votre fréquence actuelle est conservée.";
+  if (result.code === "payment_declined") return "Le paiement a été refusé : votre fréquence actuelle est conservée.";
   return result.error;
 }
 
@@ -26,10 +26,12 @@ export function FrequencyChange({
   current,
   prices,
   currency,
+  testMode,
 }: {
   current: Frequency;
   prices: PublicPlanPrice[];
   currency: string;
+  testMode: boolean;
 }) {
   const router = useRouter();
   const name = useId();
@@ -136,6 +138,13 @@ export function FrequencyChange({
             <p className="text-muted">
               Le temps restant de votre fréquence actuelle est déduit. Votre nouvelle période commence aujourd&apos;hui.
             </p>
+            <p className="text-muted">Si le paiement est refusé, votre fréquence actuelle est conservée.</p>
+            {testMode && (
+              <p className="font-medium text-ink">
+                Mode démonstration : aucune somme n&apos;est débitée, et ce changement ne sera pas repris en paiements
+                réels.
+              </p>
+            )}
             {preview.creditCents > 0 && (
               <p className="text-muted">
                 Il vous restera un crédit de{" "}
@@ -157,7 +166,7 @@ export function FrequencyChange({
           </Button>
         ) : (
           <Button onClick={apply} loading={pending}>
-            Confirmer et payer
+            {preview && preview.amountDueCents > 0 ? "Confirmer et payer" : "Confirmer"}
           </Button>
         )}
       </div>

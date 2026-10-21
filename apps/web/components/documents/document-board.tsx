@@ -54,7 +54,7 @@ export function DocumentBoardSections({ board }: { board: DocumentBoard }) {
               <li key={document.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div className="min-w-0">
                   <p className="font-medium break-words text-ink">{document.title}</p>
-                  {document.description && <p className="text-sm break-words text-muted">{document.description}</p>}
+                  {document.description && <p className="text-sm break-words whitespace-pre-line text-muted">{document.description}</p>}
                 </div>
                 <DownloadLink document={document} />
               </li>
