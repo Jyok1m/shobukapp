@@ -52,7 +52,7 @@ export function PlanCreateForm() {
         {created && (
           <Notice tone="success">
             Formule « {created.name} » créée
-            {created.stripePriceId ? " et synchronisée avec Stripe." : ". Elle n'est pas encore synchronisée avec Stripe."}
+            {created.synced ? " et synchronisée avec Stripe." : ". Elle n'est pas encore synchronisée avec Stripe."}
           </Notice>
         )}
         <Button type="submit" loading={pending} className="self-start">

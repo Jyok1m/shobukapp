@@ -24,8 +24,8 @@ export function SubscribeButton({ planId, planName }: { planId: string; planName
 
   return (
     <div className="flex flex-col gap-2">
-      <Button onClick={onClick} loading={pending} className="w-full" aria-label={`S'abonner à ${planName}`}>
-        S&apos;abonner
+      <Button onClick={onClick} loading={pending} className="w-full" aria-label={`Payer la cotisation ${planName}`}>
+        Payer ma cotisation
       </Button>
       {error && (
         <p role="alert" className="text-xs font-medium text-danger">

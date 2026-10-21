@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Brand } from "@/components/brand";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cx } from "@/lib/cx";
-import type { Role } from "@/lib/types";
+import type { Role, StripeMode } from "@/lib/types";
 import { LogoutButton } from "./logout-button";
 import { adminNav, memberNav, type NavItem } from "./nav";
 import { useJoinRequestCount } from "./use-join-request-count";
@@ -41,13 +42,13 @@ function NavList({
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               className={cx(
-                "flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent",
+                "flex min-h-11 items-center justify-between gap-2 rounded-md px-3 py-2 text-sm lg:min-h-9 transition-colors focus-visible:outline-2 focus-visible:outline-accent",
                 active ? "bg-accent-soft font-medium text-accent" : "text-ink hover:bg-ink/5",
               )}
             >
               {item.label}
               {badge > 0 && (
-                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-on-accent">
                   {badge > 99 ? "99+" : badge}
                   <span className="sr-only"> {badges[item.href]?.label(badge)}</span>
                 </span>
@@ -63,7 +64,16 @@ function NavList({
 const unreadLabel = (count: number) => (count > 1 ? "messages non lus" : "message non lu");
 const newRequestsLabel = (count: number) => (count > 1 ? "nouvelles demandes" : "nouvelle demande");
 
-export function AppShell({ user, children }: { user: ShellUser; children: ReactNode }) {
+export function AppShell({
+  user,
+  billingMode = null,
+  children,
+}: {
+  user: ShellUser;
+  /* Read for admins only: the test mode banner. */
+  billingMode?: StripeMode | null;
+  children: ReactNode;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -89,6 +99,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
       <p className="truncate px-3 text-sm font-medium text-ink">
         {user.firstName} {user.lastName}
       </p>
+      <ThemeToggle />
       <LogoutButton className="w-full" />
     </div>
   );
@@ -102,13 +113,13 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
           aria-controls="mobile-nav"
-          className="rounded-md px-3 py-1.5 text-sm font-medium text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent"
+          className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent"
         >
           {open ? "Fermer" : "Menu"}
-          {!open && unread > 0 && (
-            <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
-              {unread > 99 ? "99+" : unread}
-              <span className="sr-only"> message{unread > 1 ? "s" : ""} non lu{unread > 1 ? "s" : ""}</span>
+          {!open && unread + newRequests > 0 && (
+            <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-on-accent">
+              {unread + newRequests > 99 ? "99+" : unread + newRequests}
+              <span className="sr-only"> nouveauté{unread + newRequests > 1 ? "s" : ""} dans le menu</span>
             </span>
           )}
         </button>
@@ -120,7 +131,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
             type="button"
             aria-label="Fermer le menu"
             onClick={close}
-            className="absolute inset-0 bg-ink/30"
+            className="absolute inset-0 bg-scrim/40"
           />
           <div
             id="mobile-nav"
@@ -139,6 +150,14 @@ export function AppShell({ user, children }: { user: ShellUser; children: ReactN
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        {billingMode === "test" && (
+          <p className="mb-6 rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning sm:text-sm">
+            Stripe est en mode test : les paiements sont simulés.{" "}
+            <Link href="/admin/formules" className="font-medium underline underline-offset-2">
+              Gérer le mode de paiement
+            </Link>
+          </p>
+        )}
         {children}
       </main>
     </div>

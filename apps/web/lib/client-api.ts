@@ -5,7 +5,7 @@ export type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string; code: string | null; status: number };
 
-type Method = "GET" | "POST" | "PATCH" | "DELETE";
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /*
  * Browser call through the /api rewrite with the session cookie. Never throws:
@@ -30,6 +30,12 @@ export async function apiRequest<T = unknown>(
       return { ok: true, data: data as T };
     }
     const errorBody = (await res.json().catch(() => null)) as ApiErrorBody | null;
+    // The temporary password was not replaced yet: nothing else works until it is.
+    if (errorBody?.code === "password_change_required" && window.location.pathname !== "/premiere-connexion") {
+      // A full load on purpose: this helper has no router, and every server component must re-read the session.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign("/premiere-connexion");
+    }
     return {
       ok: false,
       error: errorMessage(res.status, errorBody),

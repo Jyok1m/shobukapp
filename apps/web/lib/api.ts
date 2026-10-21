@@ -26,6 +26,11 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await apiFetch(path);
   if (res.status === 401) redirect("/connexion");
+  if (res.status === 403) {
+    const body = (await res.json().catch(() => null)) as { code?: string } | null;
+    // An admin-created account must replace its temporary password first.
+    if (body?.code === "password_change_required") redirect("/premiere-connexion");
+  }
   if (!res.ok) throw new Error(`GET ${path} failed with status ${res.status}`);
   return (await res.json()) as T;
 }

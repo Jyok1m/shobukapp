@@ -167,7 +167,11 @@ export function AccountForm({ mode }: { mode: Mode }) {
         )}
       </Field>
       <ConsentCheckbox id="acceptTerms" error={errors.acceptTerms}>
-        J&apos;accepte les conditions d&apos;utilisation et la politique de confidentialité du Shobukan Dojo.
+        J&apos;accepte les conditions d&apos;utilisation et la{" "}
+        <Link href="/confidentialite" target="_blank" rel="noopener" className="font-medium text-accent underline underline-offset-2">
+          politique de confidentialité
+        </Link>{" "}
+        du Shobukan Dojo (s&apos;ouvre dans un nouvel onglet).
       </ConsentCheckbox>
       <Button type="submit" loading={pending} className="mt-2 w-full">
         Créer mon compte

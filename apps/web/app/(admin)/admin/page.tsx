@@ -117,7 +117,7 @@ async function AdminHome() {
     },
     {
       href: "/admin/formules",
-      title: "Formules",
+      title: "Formules de cotisation",
       description: "Les cotisations proposées, synchronisées avec Stripe.",
       figure: plans,
       figureLabel: plans === "1" ? "formule active" : "formules actives",

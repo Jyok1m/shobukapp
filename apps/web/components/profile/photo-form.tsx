@@ -9,8 +9,10 @@ import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { apiRequest } from "@/lib/client-api";
 import { apiErrorMessages } from "@/lib/errors";
+import { PhotoCropDialog } from "./photo-crop-dialog";
 
-const MAX_BYTES = 5 * 1024 * 1024;
+/* The picked file is only read in the browser: the upload is the crop (5 MB max, checked when exported). */
+const MAX_SOURCE_BYTES = 40 * 1024 * 1024;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 
 type PhotoFormProps = {
@@ -27,6 +29,8 @@ export function PhotoForm({ userId, firstName, lastName, photoVersion }: PhotoFo
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<"upload" | "remove" | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [picked, setPicked] = useState<File | null>(null);
+  const [cropError, setCropError] = useState<string | null>(null);
 
   const src = photoVersion
     ? `/api/members/${userId}/photo?v=${encodeURIComponent(photoVersion)}`
@@ -39,14 +43,20 @@ export function PhotoForm({ userId, firstName, lastName, photoVersion }: PhotoFo
     setError(null);
     // Checked again by the API: this only saves a useless upload.
     if (!ACCEPTED.includes(file.type)) return setError(apiErrorMessages.unsupported_file_type);
-    if (file.size > MAX_BYTES) return setError(apiErrorMessages.file_too_large);
+    if (file.size > MAX_SOURCE_BYTES) return setError("Cette image est trop lourde. Choisissez une photo de moins de 40 Mo.");
+    setCropError(null);
+    setPicked(file);
+  }
 
+  async function upload(cropped: File) {
     const body = new FormData();
-    body.append("file", file);
+    body.append("file", cropped);
     setPending("upload");
+    setCropError(null);
     const result = await apiRequest("POST", "/me/photo", body);
     setPending(null);
-    if (!result.ok) return setError(result.error);
+    if (!result.ok) return setCropError(result.error);
+    setPicked(null);
     router.refresh();
   }
 
@@ -60,7 +70,7 @@ export function PhotoForm({ userId, firstName, lastName, photoVersion }: PhotoFo
   }
 
   return (
-    <Card title="Photo" description="JPEG, PNG ou WebP, 5 Mo maximum.">
+    <Card title="Photo" description="JPEG, PNG ou WebP. Vous pourrez la recadrer avant de l'enregistrer.">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <MemberAvatar firstName={firstName} lastName={lastName} src={src} size="lg" />
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -84,6 +94,13 @@ export function PhotoForm({ userId, firstName, lastName, photoVersion }: PhotoFo
         </div>
       </div>
       <FormAlert message={error} />
+      <PhotoCropDialog
+        file={picked}
+        pending={pending === "upload"}
+        error={cropError}
+        onCancel={() => setPicked(null)}
+        onConfirm={upload}
+      />
       <ConfirmDialog
         open={confirming}
         title="Supprimer votre photo ?"

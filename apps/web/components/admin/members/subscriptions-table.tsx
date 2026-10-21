@@ -6,11 +6,11 @@ import type { AdminMemberDetail } from "@/lib/types";
 
 export function SubscriptionsTable({ subscriptions }: { subscriptions: AdminMemberDetail["subscriptions"] }) {
   if (subscriptions.length === 0) {
-    return <EmptyState title="Aucun abonnement" description="Ce membre n'a encore souscrit aucune formule." />;
+    return <EmptyState title="Aucune cotisation" description="Ce membre n'a encore souscrit aucune formule." />;
   }
   return (
     <Table>
-      <caption className="sr-only">Historique des abonnements</caption>
+      <caption className="sr-only">Historique des cotisations</caption>
       <thead>
         <tr>
           <Th>Formule</Th>

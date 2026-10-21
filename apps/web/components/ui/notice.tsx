@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import { cx } from "@/lib/cx";
 
-export type NoticeTone = "info" | "success" | "danger";
+export type NoticeTone = "info" | "success" | "warning" | "danger";
 
 const tones: Record<NoticeTone, string> = {
   info: "border-line bg-paper text-ink",
   success: "border-success/20 bg-success-soft text-success",
+  warning: "border-warning/30 bg-warning-soft text-warning",
   danger: "border-danger/20 bg-danger-soft text-danger",
 };
 

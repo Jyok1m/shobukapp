@@ -56,7 +56,7 @@ export function ConversationList({
                     {lastMessage.body}
                   </span>
                   {unread > 0 && (
-                    <span className="ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
+                    <span className="ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-on-accent">
                       {unread}
                       <span className="sr-only"> message{unread > 1 ? "s" : ""} non lu{unread > 1 ? "s" : ""}</span>
                     </span>

@@ -4,7 +4,7 @@ export const membershipFilters: { value: MembershipFilter | null; label: string 
   { value: null, label: "Tous" },
   { value: "active", label: "À jour" },
   { value: "past_due", label: "En retard" },
-  { value: "none", label: "Sans abonnement" },
+  { value: "none", label: "Sans cotisation" },
 ];
 
 export type MemberQuery = { q: string; status: MembershipFilter | null };

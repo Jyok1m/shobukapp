@@ -96,7 +96,7 @@ export function DocumentList({
                     <a
                       href={`/api/documents/${document.id}/file`}
                       download
-                      className="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-accent hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent"
+                      className="inline-flex min-h-10 sm:min-h-8 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-accent hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent"
                       aria-label={`Télécharger ${document.title}`}
                     >
                       Télécharger
@@ -107,9 +107,8 @@ export function DocumentList({
                           Modifier
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="ghost-danger"
                           size="sm"
-                          className="text-danger"
                           onClick={() => {
                             setDeleteError(null);
                             setDeleting(document);

@@ -16,7 +16,7 @@ import { formatDate } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import type { Membership, PublicPlan } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Mon abonnement" };
+export const metadata: Metadata = { title: "Ma cotisation" };
 
 // A subscription in these states still exists at Stripe: checkout answers already_subscribed.
 const OUTSTANDING = ["past_due", "unpaid"];
@@ -33,7 +33,7 @@ function MembershipCard({ membership }: { membership: Membership }) {
           </div>
           {isMember && currentPeriodEnd && (
             <p className="text-sm text-muted">
-              {cancelAtPeriodEnd ? "Fin de l'abonnement le " : "Prochain renouvellement le "}
+              {cancelAtPeriodEnd ? "Fin de la cotisation le " : "Prochain renouvellement le "}
               <span className="font-medium text-ink">{formatDate(currentPeriodEnd)}</span>
             </p>
           )}
@@ -51,7 +51,7 @@ function MembershipCard({ membership }: { membership: Membership }) {
       </div>
       {isMember && cancelAtPeriodEnd && (
         <Notice className="mt-4">
-          Votre abonnement a été résilié et ne sera pas renouvelé. Vous restez membre jusqu&apos;à la fin de la
+          Votre cotisation a été résiliée et ne sera pas renouvelée. Vous restez membre jusqu&apos;à la fin de la
           période en cours.
         </Notice>
       )}
@@ -97,6 +97,11 @@ async function Subscription() {
 
   return (
     <div className="flex flex-col gap-8">
+      {membership.testMode && (
+        <Notice tone="warning">
+          Paiement de démonstration : utilisez la carte 4242 4242 4242 4242, aucune somme n&apos;est débitée.
+        </Notice>
+      )}
       <PaymentReturnNotice isMember={membership.isMember} />
       <MembershipCard membership={membership} />
       {canSubscribe && (
@@ -120,7 +125,7 @@ async function Subscription() {
 export default function SubscriptionPage() {
   return (
     <div className="flex flex-col">
-      <PageHeader title="Mon abonnement" description="Votre adhésion au dojo, vos paiements et vos factures." />
+      <PageHeader title="Ma cotisation" description="Votre adhésion au dojo, vos paiements et vos factures." />
       <Suspense fallback={<PageFallback />}>
         <Subscription />
       </Suspense>

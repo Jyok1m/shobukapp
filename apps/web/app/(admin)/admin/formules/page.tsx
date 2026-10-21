@@ -1,21 +1,28 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { BillingModeCard } from "@/components/admin/billing-mode-card";
 import { PlanCreateForm } from "@/components/admin/plan-create-form";
 import { PlansTable } from "@/components/admin/plans-table";
 import { PageFallback } from "@/components/page-fallback";
 import { PageHeader } from "@/components/page-header";
 import { apiGet } from "@/lib/api";
 import { requireUser } from "@/lib/session";
-import type { AdminPlan } from "@/lib/types";
+import type { AdminPlan, BillingSettings } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Formules" };
+export const metadata: Metadata = { title: "Formules de cotisation" };
 
 /* The layout redirect does not protect the page: it checks the role itself. */
 async function Plans() {
   await requireUser("ADMIN");
-  const plans = await apiGet<AdminPlan[]>("/admin/plans");
+  const [plans, billing] = await Promise.all([
+    apiGet<AdminPlan[]>("/admin/plans"),
+    apiGet<BillingSettings>("/admin/settings/billing"),
+  ]);
   return (
     <div className="flex flex-col gap-8">
+      <div className="max-w-3xl">
+        <BillingModeCard settings={billing} />
+      </div>
       <PlanCreateForm />
       <section className="flex flex-col gap-4" aria-labelledby="plans-title">
         <h2 id="plans-title" className="font-serif text-xl font-semibold text-ink">
@@ -31,7 +38,7 @@ export default function AdminPlansPage() {
   return (
     <div className="flex flex-col">
       <PageHeader
-        title="Formules"
+        title="Formules de cotisation"
         description="Les cotisations proposées aux pratiquants, synchronisées avec Stripe."
       />
       <Suspense fallback={<PageFallback />}>

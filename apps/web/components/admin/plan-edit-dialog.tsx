@@ -33,7 +33,7 @@ function PlanEditForm({ plan, onClose, onSaved }: { plan: AdminPlan; onClose: ()
   const [errors, setErrors] = useState<PlanFieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const synced = Boolean(plan.stripeProductId && plan.stripePriceId);
+  const synced = plan.synced;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,8 +62,8 @@ function PlanEditForm({ plan, onClose, onSaved }: { plan: AdminPlan; onClose: ()
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       <Notice>
-        Modifier le montant ou la périodicité crée un nouveau prix dans Stripe. Les abonnés actuels conservent
-        l&apos;ancien tarif jusqu&apos;à ce qu&apos;ils changent de formule ; seuls les nouveaux abonnements
+        Modifier le montant ou la périodicité crée un nouveau prix dans Stripe. Les pratiquants qui cotisent déjà conservent
+        l&apos;ancien tarif jusqu&apos;à ce qu&apos;ils changent de formule ; seules les nouvelles cotisations
         utilisent le nouveau.
       </Notice>
       {!synced && (

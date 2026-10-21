@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { DeleteMemberZone } from "@/components/admin/members/delete-member-zone";
 import { MemberLicences } from "@/components/admin/members/member-licences";
+import { MemberRole } from "@/components/admin/members/member-role";
 import { MemberReminders } from "@/components/admin/members/member-reminders";
 import { fullName } from "@/components/admin/members/query";
 import { SubscriptionsTable } from "@/components/admin/members/subscriptions-table";
@@ -13,6 +14,7 @@ import { MembershipBadge } from "@/components/membership-badge";
 import { PageFallback } from "@/components/page-fallback";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { Badge } from "@/components/ui/badge";
+import { Notice } from "@/components/ui/notice";
 import { apiFetch, apiGet } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { requireUser } from "@/lib/session";
@@ -44,7 +46,15 @@ function Section({ id, title, children }: { id: string; title: string; children:
 }
 
 /* The layout redirect does not protect the page: it checks the role itself. */
-async function MemberDetail({ params }: { params: Promise<{ id: string }> }) {
+const createdNotices: Record<string, { text: string; tone: "success" | "warning" }> = {
+  sent: { text: "Compte créé. Le membre a reçu un e-mail de bienvenue, sans le mot de passe : remettez-lui le mot de passe provisoire en main propre.", tone: "success" },
+  logged: { text: "Compte créé. E-mail de bienvenue non envoyé : aucun serveur d'envoi configuré. Prévenez le membre et remettez-lui le mot de passe provisoire en main propre.", tone: "warning" },
+  failed: { text: "Compte créé, mais l'e-mail de bienvenue n'a pas pu partir. Prévenez le membre et remettez-lui le mot de passe provisoire en main propre.", tone: "warning" },
+};
+
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+async function MemberDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SearchParams }) {
   const admin = await requireUser("ADMIN");
   const { id } = await params;
   const member = await loadMember(id);
@@ -53,9 +63,17 @@ async function MemberDetail({ params }: { params: Promise<{ id: string }> }) {
     apiGet<License[]>(`/admin/licenses?userId=${member.id}`),
   ]);
   const name = fullName(member);
+  const createdRaw = (await searchParams).cree;
+  const createdKey = Array.isArray(createdRaw) ? createdRaw[0] : (createdRaw ?? "");
+  const created = Object.hasOwn(createdNotices, createdKey) ? createdNotices[createdKey] : undefined;
 
   return (
     <div className="flex flex-col gap-10">
+      {created && (
+        <Notice tone={created.tone} className="max-w-3xl">
+          {created.text}
+        </Notice>
+      )}
       <div className="flex flex-col gap-2">
         <Link href="/admin/membres" className="text-sm font-medium text-accent hover:underline">
           Retour aux membres
@@ -72,13 +90,23 @@ async function MemberDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
 
+      <div className="max-w-3xl">
+        <MemberRole
+          memberId={member.id}
+          name={name}
+          role={member.role}
+          history={member.roleChanges}
+          isSelf={admin.id === member.id}
+        />
+      </div>
+
       <Section id="profile-title" title="Profil">
         <div className="max-w-3xl">
           <ProfileForm user={member} memberId={member.id} />
         </div>
       </Section>
 
-      <Section id="subscriptions-title" title="Abonnements">
+      <Section id="subscriptions-title" title="Cotisations">
         <SubscriptionsTable subscriptions={member.subscriptions} />
       </Section>
 
@@ -115,10 +143,16 @@ async function MemberDetail({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
-export default function AdminMemberPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AdminMemberPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: SearchParams;
+}) {
   return (
     <Suspense fallback={<PageFallback />}>
-      <MemberDetail params={params} />
+      <MemberDetail params={params} searchParams={searchParams} />
     </Suspense>
   );
 }

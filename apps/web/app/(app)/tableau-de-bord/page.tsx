@@ -46,7 +46,7 @@ async function MembershipSummary() {
   await requireUser();
   const membership = await apiGet<Membership>("/billing/subscription");
   return (
-    <LinkCard href="/abonnement" title="Mon abonnement">
+    <LinkCard href="/cotisation" title="Ma cotisation">
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <MembershipBadge status={membership.status} />
@@ -103,7 +103,7 @@ export default function DashboardPage() {
         <Greeting />
       </Suspense>
       <div className="grid gap-4 md:grid-cols-3">
-        <Suspense fallback={<CardFallback title="Mon abonnement" />}>
+        <Suspense fallback={<CardFallback title="Ma cotisation" />}>
           <MembershipSummary />
         </Suspense>
         <Suspense fallback={<CardFallback title="Mon profil" />}>

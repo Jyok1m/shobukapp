@@ -1,18 +1,27 @@
 @import "tailwindcss";
 
+/*
+ * Light tokens. Every pair used for text was checked at WCAG AA (4.5:1) or
+ * better; `field` (input borders) meets the 3:1 non-text contrast.
+ */
 @theme {
   --color-ink: #1c1917;
   --color-paper: #faf7f2;
   --color-surface: #ffffff;
   --color-line: #e7e0d6;
+  --color-field: #8a8075;
   --color-accent: #8b1d1d;
   --color-accent-strong: #6f1616;
   --color-accent-soft: #f6e7e5;
+  --color-on-accent: #ffffff;
   --color-muted: #6b625a;
   --color-danger: #b42318;
   --color-danger-soft: #fdecea;
   --color-success: #2f6b3a;
   --color-success-soft: #e8f3ea;
+  --color-warning: #7a4f00;
+  --color-warning-soft: #fdf3dc;
+  --color-scrim: #1c1917;
 }
 
 @theme inline {
@@ -20,7 +29,82 @@
   --font-serif: var(--font-title), ui-serif, Georgia, serif;
 }
 
-body {
-  background: var(--color-paper);
-  color: var(--color-ink);
+/* Dark tokens: same names, so every utility follows without a dark: variant. */
+@layer theme {
+  :root {
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --color-ink: #eee8df;
+      --color-paper: #14110f;
+      --color-surface: #1e1a17;
+      --color-line: #3b342e;
+      --color-field: #7d7369;
+      --color-accent: #f0948a;
+      --color-accent-strong: #f7b2aa;
+      --color-accent-soft: #3d211e;
+      --color-on-accent: #1a0f0d;
+      --color-muted: #b0a69b;
+      --color-danger: #f4978e;
+      --color-danger-soft: #3e1f1b;
+      --color-success: #8fd19b;
+      --color-success-soft: #1b3321;
+      --color-warning: #f2c46d;
+      --color-warning-soft: #33280f;
+      --color-scrim: #000000;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-ink: #eee8df;
+    --color-paper: #14110f;
+    --color-surface: #1e1a17;
+    --color-line: #3b342e;
+    --color-field: #7d7369;
+    --color-accent: #f0948a;
+    --color-accent-strong: #f7b2aa;
+    --color-accent-soft: #3d211e;
+    --color-on-accent: #1a0f0d;
+    --color-muted: #b0a69b;
+    --color-danger: #f4978e;
+    --color-danger-soft: #3e1f1b;
+    --color-success: #8fd19b;
+    --color-success-soft: #1b3321;
+    --color-warning: #f2c46d;
+    --color-warning-soft: #33280f;
+    --color-scrim: #000000;
+  }
+}
+
+@layer base {
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+  }
+
+  /* Tailwind 4 preflight sets buttons back to the default cursor. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  label[for],
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  input[type="file"]::file-selector-button,
+  input[type="range"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  textarea:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }

@@ -91,9 +91,8 @@ export function InvitationsTable({ invitations }: { invitations: Invitation[] })
                   <div className="flex justify-end">
                     {invitation.status === "PENDING" && (
                       <Button
-                        variant="ghost"
+                        variant="ghost-danger"
                         size="sm"
-                        className="text-danger"
                         onClick={() => {
                           setError(null);
                           setRevoking(invitation);

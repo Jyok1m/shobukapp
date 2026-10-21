@@ -37,7 +37,7 @@ export function PaymentReturnNotice({ isMember }: { isMember: boolean }) {
   if (isMember) {
     return (
       <Notice tone="success" className="mb-6">
-        Paiement reçu, votre abonnement est actif. Bienvenue au dojo !
+        Paiement reçu, votre cotisation est active. Bienvenue au dojo !
       </Notice>
     );
   }

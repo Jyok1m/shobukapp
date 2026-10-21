@@ -20,6 +20,9 @@ export type SelfUser = {
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   directoryVisible: boolean;
+  /* Set when an admin created the account: every route but /auth/me, /auth/logout and /auth/password answers 403 until changed. */
+  mustChangePassword: boolean;
+  termsAcceptedAt: string | null;
   createdAt: string;
 };
 
@@ -63,8 +66,12 @@ export type AdminPlan = {
   amountCents: number;
   currency: string;
   interval: PlanInterval;
-  stripeProductId: string | null;
-  stripePriceId: string | null;
+  stripeTestProductId: string | null;
+  stripeTestPriceId: string | null;
+  stripeLiveProductId: string | null;
+  stripeLivePriceId: string | null;
+  /* Product and price exist in the current Stripe mode. */
+  synced: boolean;
   active: boolean;
   sortOrder: number;
   createdAt: string;
@@ -90,6 +97,8 @@ export type Membership = {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   manageable: boolean;
+  /* Stripe test mode: payments are simulated. */
+  testMode: boolean;
   payments: Payment[];
 };
 
@@ -143,7 +152,28 @@ export type AdminMemberDetail = SelfUser & {
   }[];
   payments: Payment[];
   remindersReceived: PaymentReminder[];
+  roleChanges: RoleChange[];
 };
+
+export type RoleChange = {
+  fromRole: Role;
+  toRole: Role;
+  createdAt: string;
+  changedBy: { firstName: string; lastName: string } | null;
+};
+
+export type StripeMode = "test" | "live";
+
+/* GET and PUT /admin/settings/billing */
+export type BillingSettings = {
+  mode: StripeMode;
+  configured: Record<StripeMode, boolean>;
+  updatedAt: string | null;
+  updatedBy: { firstName: string; lastName: string } | null;
+};
+
+/* POST /admin/members */
+export type CreatedMember = { user: SelfUser; delivery: MailDelivery };
 
 /* POST /admin/members/:id/reminders. "logged" means no SMTP server is configured. */
 export type ReminderResult = {

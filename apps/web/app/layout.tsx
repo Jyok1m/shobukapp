@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Shippori_Mincho } from "next/font/google";
+import { CookieNotice } from "@/components/cookie-notice";
+import { themeBootScript } from "@/lib/theme-script";
 import "./globals.css";
 
 const ui = Geist({
@@ -23,8 +25,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${ui.variable} ${title.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col bg-paper font-sans text-ink">{children}</body>
+    // data-theme is set by the boot script before React hydrates.
+    <html lang="fr" className={`${ui.variable} ${title.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Runs before the first paint: no flash of the wrong theme. */}
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
+      <body className="flex min-h-full flex-col bg-paper font-sans text-ink">
+        {children}
+        <CookieNotice />
+      </body>
     </html>
   );
 }

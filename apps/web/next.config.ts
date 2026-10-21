@@ -35,6 +35,10 @@ const nextConfig: NextConfig = {
       { source: "/inscription", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
     ];
   },
+  /* "Abonnement" became "cotisation" in the UI: old links and bookmarks keep working. */
+  async redirects() {
+    return [{ source: "/abonnement", destination: "/cotisation", permanent: true }];
+  },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${apiUrl}/:path*` }];
   },

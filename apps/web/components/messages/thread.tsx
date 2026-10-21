@@ -174,7 +174,7 @@ export function Thread({
                 <p
                   className={cx(
                     "max-w-[85%] rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap sm:max-w-[70%]",
-                    mine ? "bg-accent text-white" : "border border-line bg-paper text-ink",
+                    mine ? "bg-accent text-on-accent" : "border border-line bg-paper text-ink",
                   )}
                 >
                   <span className="sr-only">{mine ? "Vous : " : `${counterpart.firstName} : `}</span>

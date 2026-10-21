@@ -68,7 +68,7 @@ export function PlansTable({ plans }: { plans: AdminPlan[] }) {
         </thead>
         <tbody>
           {plans.map((plan) => {
-            const synced = Boolean(plan.stripeProductId && plan.stripePriceId);
+            const synced = plan.synced;
             return (
               <tr key={plan.id} className={plan.active ? undefined : "bg-paper/60"}>
                 <Td className="min-w-48">
@@ -94,9 +94,8 @@ export function PlansTable({ plans }: { plans: AdminPlan[] }) {
                     </Button>
                     {plan.active ? (
                       <Button
-                        variant="ghost"
+                        variant="ghost-danger"
                         size="sm"
-                        className="text-danger"
                         onClick={() => {
                           setArchiveError(null);
                           setArchiving(plan);
@@ -133,7 +132,7 @@ export function PlansTable({ plans }: { plans: AdminPlan[] }) {
       <ConfirmDialog
         open={archiving !== null}
         title={archiving ? `Archiver « ${archiving.name} » ?` : "Archiver la formule ?"}
-        description="La formule ne sera plus proposée aux pratiquants et son prix sera désactivé dans Stripe. Les abonnés actuels continuent d'être prélevés. Vous pourrez la réactiver plus tard."
+        description="La formule ne sera plus proposée aux pratiquants et son prix sera désactivé dans Stripe. Les pratiquants qui la paient déjà continuent d'être prélevés. Vous pourrez la réactiver plus tard."
         confirmLabel="Archiver"
         pending={archiving !== null && pendingId === archiving.id}
         error={archiveError}

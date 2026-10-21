@@ -26,5 +26,5 @@ The dojo is the data controller. This app processes identity, contact, licence i
 
 - Retention of join requests: suggested, delete declined or unanswered requests after six months, and invited ones once the account exists.
 - Retention period after a member leaves (suggested: delete after one season without membership, keep licence numbers if the federation requires it).
-- Privacy policy and terms pages, and the consent checkbox at signup that points to them.
+- `/confidentialite` exists (privacy and cookies); its retention period and contact channel are left "à préciser par le bureau". A terms of use page does not exist yet, while the signup consent mentions the conditions.
 - Hosting location of the database and files (EU).

@@ -38,7 +38,7 @@ const membershipStatuses: Record<string, { label: string; tone: BadgeTone }> = {
 };
 
 export function membershipStatus(status: string | null): { label: string; tone: BadgeTone } {
-  if (!status) return { label: "Sans abonnement", tone: "neutral" };
+  if (!status) return { label: "Sans cotisation", tone: "neutral" };
   return membershipStatuses[status] ?? { label: "Statut inconnu", tone: "neutral" };
 }
 

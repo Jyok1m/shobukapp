@@ -120,8 +120,10 @@ export function JoinRequestForm() {
         </label>
       </div>
       <ConsentCheckbox id="acceptPrivacy" error={errors.acceptPrivacy}>
-        J&apos;accepte que le Shobukan Dojo conserve ces informations pour répondre à ma demande. Elles ne sont
-        partagées avec personne d&apos;autre.
+        J&apos;accepte que le Shobukan Dojo conserve ces informations pour répondre à ma demande (
+        <Link href="/confidentialite" target="_blank" rel="noopener" className="font-medium text-accent underline underline-offset-2">
+          politique de confidentialité, nouvel onglet
+        </Link>).
       </ConsentCheckbox>
       <Button type="submit" loading={pending} className="mt-2 w-full">
         Envoyer ma demande
