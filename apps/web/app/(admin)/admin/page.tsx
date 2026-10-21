@@ -24,6 +24,16 @@ async function countMembers(search: string): Promise<string | null> {
   }
 }
 
+async function countNewRequests(): Promise<string | null> {
+  try {
+    const { count } = await apiGet<{ count: number }>("/admin/join-requests/count");
+    return String(count);
+  } catch (error) {
+    unstable_rethrow(error);
+    return null;
+  }
+}
+
 async function countActivePlans(): Promise<string | null> {
   try {
     const plans = await apiGet<AdminPlan[]>("/admin/plans");
@@ -81,13 +91,22 @@ function TileCard({ tile }: { tile: Tile }) {
  */
 async function AdminHome() {
   await requireUser("ADMIN");
-  const [late, members, plans] = await Promise.all([
+  const [requests, late, members, plans] = await Promise.all([
+    countNewRequests(),
     countMembers("?status=past_due"),
     countMembers(""),
     countActivePlans(),
   ]);
 
   const tiles: Tile[] = [
+    {
+      href: "/admin/demandes",
+      title: "Demandes",
+      description: "Messages reçus depuis « Nous rejoindre », liens d'inscription.",
+      figure: requests,
+      figureLabel: requests === "1" ? "nouvelle demande" : "nouvelles demandes",
+      alert: requests !== null && requests !== "0",
+    },
     {
       href: "/admin/pratiquants",
       title: "Pratiquants",
@@ -106,7 +125,7 @@ async function AdminHome() {
     {
       href: "/admin/membres",
       title: "Membres",
-      description: "Fiches, coordonnées, export CSV.",
+      description: "Fiches, coordonnées, export CSV. Codes d'activation dans « Invitations ».",
       figure: members,
       figureLabel: members === "1" ? "compte" : "comptes",
     },

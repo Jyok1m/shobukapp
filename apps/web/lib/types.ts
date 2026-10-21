@@ -208,3 +208,60 @@ export type Thread = {
   items: Message[];
   nextCursor: string | null;
 };
+
+/* Onboarding (docs/onboarding.md). */
+export type InvitationPreview = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  expiresAt: string;
+};
+
+export type InvitationStatus = "PENDING" | "USED" | "REVOKED" | "EXPIRED" | "LOCKED";
+export type InvitationKind = "LINK" | "CODE";
+export type MailDelivery = "sent" | "logged" | "failed";
+
+export type Invitation = {
+  id: string;
+  kind: InvitationKind;
+  email: string;
+  firstName: string;
+  lastName: string;
+  expiresAt: string;
+  usedAt: string | null;
+  revokedAt: string | null;
+  failedAttempts: number;
+  createdAt: string;
+  createdBy: { firstName: string; lastName: string } | null;
+  status: InvitationStatus;
+  joinRequestId?: string | null;
+};
+
+export type JoinRequestStatus = "NEW" | "INVITED" | "DECLINED";
+
+export type JoinRequest = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  message: string;
+  wantsTrial: boolean;
+  status: JoinRequestStatus;
+  handledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  handledBy: { firstName: string; lastName: string } | null;
+  invitation: Invitation | null;
+};
+
+export type JoinRequestsPage = {
+  items: JoinRequest[];
+  nextCursor: string | null;
+};
+
+/* POST /admin/join-requests/:id/invite */
+export type LinkInvitationResult = { link: string; expiresAt: string; delivery: MailDelivery };
+
+/* POST /admin/invitations: the code is only ever returned here. */
+export type CodeInvitationResult = { code: string; expiresAt: string; delivery: MailDelivery };

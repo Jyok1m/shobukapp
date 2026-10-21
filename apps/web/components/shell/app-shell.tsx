@@ -8,6 +8,7 @@ import { cx } from "@/lib/cx";
 import type { Role } from "@/lib/types";
 import { LogoutButton } from "./logout-button";
 import { adminNav, memberNav, type NavItem } from "./nav";
+import { useJoinRequestCount } from "./use-join-request-count";
 import { useUnreadCount } from "./use-unread-count";
 
 export type ShellUser = { firstName: string; lastName: string; role: Role };
@@ -25,14 +26,14 @@ function NavList({
   items: NavItem[];
   pathname: string;
   onNavigate: () => void;
-  /* Count shown next to an item, by href. Zero hides it. */
-  badges?: Record<string, number>;
+  /* Count shown next to an item, by href, with its screen reader wording. Zero hides it. */
+  badges?: Record<string, { count: number; label: (count: number) => string }>;
 }) {
   return (
     <ul className="flex flex-col gap-0.5">
       {items.map((item) => {
         const active = isActive(pathname, item.href);
-        const badge = badges[item.href] ?? 0;
+        const badge = badges[item.href]?.count ?? 0;
         return (
           <li key={item.href}>
             <Link
@@ -48,7 +49,7 @@ function NavList({
               {badge > 0 && (
                 <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
                   {badge > 99 ? "99+" : badge}
-                  <span className="sr-only"> non lu{badge > 1 ? "s" : ""}</span>
+                  <span className="sr-only"> {badges[item.href]?.label(badge)}</span>
                 </span>
               )}
             </Link>
@@ -59,21 +60,25 @@ function NavList({
   );
 }
 
+const unreadLabel = (count: number) => (count > 1 ? "messages non lus" : "message non lu");
+const newRequestsLabel = (count: number) => (count > 1 ? "nouvelles demandes" : "nouvelle demande");
+
 export function AppShell({ user, children }: { user: ShellUser; children: ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const unread = useUnreadCount();
+  const newRequests = useJoinRequestCount(user.role === "ADMIN");
 
   const navigation = (
     <nav aria-label="Navigation principale" className="flex flex-col gap-6">
-      <NavList items={memberNav} pathname={pathname} onNavigate={close} badges={{ "/messagerie": unread }} />
+      <NavList items={memberNav} pathname={pathname} onNavigate={close} badges={{ "/messagerie": { count: unread, label: unreadLabel } }} />
       {user.role === "ADMIN" && (
         <div className="flex flex-col gap-2">
           <p className="px-3 text-xs font-semibold tracking-wider text-muted uppercase">
             Administration
           </p>
-          <NavList items={adminNav} pathname={pathname} onNavigate={close} />
+          <NavList items={adminNav} pathname={pathname} onNavigate={close} badges={{ "/admin/demandes": { count: newRequests, label: newRequestsLabel } }} />
         </div>
       )}
     </nav>

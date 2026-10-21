@@ -54,12 +54,17 @@ export function LoginForm() {
       <Button type="submit" loading={pending} className="mt-2 w-full">
         Se connecter
       </Button>
-      <p className="text-center text-sm text-muted">
-        Pas encore de compte ?{" "}
-        <Link href="/inscription" className="font-medium text-accent hover:underline">
-          Créer un compte
+      <div className="flex flex-col gap-2 border-t border-line pt-4 text-center text-sm">
+        <Link href="/activation" className="font-medium text-accent hover:underline">
+          Je pratique déjà au dojo mais je n&apos;ai pas encore de compte
         </Link>
-      </p>
+        <p className="text-muted">
+          Pas encore pratiquant ?{" "}
+          <Link href="/nous-rejoindre" className="font-medium text-accent hover:underline">
+            Nous rejoindre
+          </Link>
+        </p>
+      </div>
     </form>
   );
 }

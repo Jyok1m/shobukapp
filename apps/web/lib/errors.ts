@@ -18,6 +18,9 @@ export const apiErrorMessages: Record<string, string> = {
   member_not_found: "Ce membre est introuvable. Il a peut-être été supprimé.",
   cannot_delete_self: "Vous ne pouvez pas supprimer votre propre compte depuis l'administration.",
   stripe_error: "Le service de paiement a rencontré une erreur, réessayez.",
+  invalid_invitation: "Ce lien ou ce code d'inscription n'est plus valable.",
+  join_request_not_found: "Cette demande est introuvable. Elle a peut-être été supprimée.",
+  invitation_not_found: "Cette invitation n'est plus en attente : elle a déjà été utilisée, révoquée ou a expiré.",
 };
 
 const statusMessages: Record<number, string> = {

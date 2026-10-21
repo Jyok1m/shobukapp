@@ -37,6 +37,20 @@ export async function publicApiGet<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+/*
+ * Preview of a signup link. The token never goes into an error message: those
+ * end up in server logs and error digests. A 429 is an expected answer here.
+ */
+export async function getInvitationPreview<T>(
+  token: string,
+): Promise<{ kind: "ok"; data: T } | { kind: "invalid" } | { kind: "busy" }> {
+  const res = await fetch(`${API_URL}/auth/invitations/${encodeURIComponent(token)}`, { cache: "no-store" });
+  if (res.status === 404) return { kind: "invalid" };
+  if (res.status === 429) return { kind: "busy" };
+  if (!res.ok) throw new Error(`GET /auth/invitations/:token failed with status ${res.status}`);
+  return { kind: "ok", data: (await res.json()) as T };
+}
+
 /* Deduplicated per request: layouts and pages can all ask for the user. */
 export const getCurrentUser = cache(async (): Promise<SelfUser | null> => {
   const res = await apiFetch("/auth/me");
