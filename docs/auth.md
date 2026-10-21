@@ -43,4 +43,4 @@ Every browser request reaches the API through the Next rewrite, so the socket pe
 
 ## Web side
 
-The `(app)` and `(admin)` layouts call `/auth/me` server-side and redirect. That avoids flashing empty screens; the API remains the only authority.
+The `(app)` and `(admin)` layouts call `/auth/me` server-side and redirect, which avoids flashing empty screens. A layout redirect does not protect its page: every protected page checks the user itself (`docs/architecture.md`, Protecting a page). The API remains the only authority.

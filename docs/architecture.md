@@ -55,6 +55,13 @@ app/
 
 Route segments are French because they are user-facing URLs; component and file names inside stay English.
 
+### Protecting a page (Next 16, cacheComponents)
+
+- **A layout redirect does not protect its page.** The page renders in parallel with its layouts: a practitioner fetching `/admin` received the page text in the RSC payload even though the layout redirected. Every protected page calls `requireUser()` (or `requireUser('ADMIN')`) itself, or only renders data the API returned for the forwarded cookie.
+- `cookies()` must be read inside `<Suspense>` with cacheComponents, so the session checks live in Suspense boundaries (`ProtectedShell`). A redirect from there becomes a 200 with a meta refresh, not a 307.
+- `apps/web/proxy.ts` (the Next 16 name of middleware) adds a cheap 307 to `/connexion` when the session cookie is absent on protected paths. It only reads presence: validity is still checked through `/auth/me`. Convenience, not security.
+- `getCurrentUser()` is deduplicated per request with React `cache`, never with `use cache`: a cached user would survive a logout.
+
 ## Configuration
 
 `apps/api/.env` (see `.env.example`): `PORT`, `APP_ENV`, `DATABASE_URL`, `WEB_URL`, `SESSION_TTL_DAYS`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STORAGE_DIR`, `SMTP_URL`, `MAIL_FROM`.
