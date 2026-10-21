@@ -1,7 +1,7 @@
 # Architecture
 
 ```
-browser --> apps/web (Next 16, :3000) --rewrite /api/*--> apps/api (Nest 11, :3001) --> Postgres
+browser --> apps/web (Next 16, :3000) --rewrite /api/*--> apps/api (Nest 11, :3001, never public) --> Postgres
                                                               |
                                                               |--> Stripe API (plans, Checkout, Portal)
                                                               |--< Stripe webhooks (/billing/webhook)
@@ -13,7 +13,7 @@ browser --> apps/web (Next 16, :3000) --rewrite /api/*--> apps/api (Nest 11, :30
 
 - `apps/web/next.config.ts` rewrites `/api/:path*` to `${API_URL}/:path*`. The browser only ever sees port 3000: the session cookie is first-party and there is no CORS configuration to keep in sync.
 - Server components read the session by forwarding the incoming `cookie` header to the API (`GET /auth/me`). They never decode anything themselves.
-- The Stripe webhook is the one route Stripe calls directly on the API, not through the rewrite: it needs the raw body.
+- The Stripe webhook also comes through the rewrite (`/api/billing/webhook`): the API has no public host (`deployment.md`). The rewrite streams the raw body untouched, so the signature holds. In development, `stripe listen` can target either port.
 
 ## API modules
 
@@ -64,7 +64,7 @@ Route segments are French because they are user-facing URLs; component and file 
 
 ## Configuration
 
-`apps/api/.env` (see `.env.example`): `PORT`, `APP_ENV`, `DATABASE_URL`, `WEB_URL`, `SESSION_TTL_DAYS`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STORAGE_DIR`, `SMTP_URL`, `MAIL_FROM`.
+`apps/api/.env` (see `.env.example`): `PORT`, `APP_ENV`, `DATABASE_URL`, `WEB_URL`, `SESSION_TTL_DAYS`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STORAGE_DIR`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`. Production values: `deployment.md`.
 `apps/web/.env.local`: `API_URL`.
 
 Configuration is read through `@nestjs/config` and validated at startup: a missing `DATABASE_URL` stops the boot, a missing Stripe key disables billing instead of crashing, so the rest of the app can be developed without a Stripe account.

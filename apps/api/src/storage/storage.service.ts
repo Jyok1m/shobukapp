@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { createReadStream, existsSync } from 'node:fs';
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { Readable } from 'node:stream';
 
 export type AllowedMime =
@@ -50,8 +50,10 @@ export class StorageService {
   private readonly root: string;
 
   constructor(config: ConfigService) {
-    // Relative to apps/api, not to the directory the API was started from.
-    this.root = resolve(apiRoot(), config.getOrThrow<string>('storageDir'));
+    // A relative path is anchored on apps/api, not on the directory the API
+    // was started from. The container uses an absolute one, on a volume.
+    const dir = config.getOrThrow<string>('storageDir');
+    this.root = isAbsolute(dir) ? dir : resolve(apiRoot(), dir);
   }
 
   async put(buffer: Buffer): Promise<string> {

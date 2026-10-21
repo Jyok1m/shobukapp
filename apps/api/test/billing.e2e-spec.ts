@@ -24,6 +24,8 @@ describe('Billing (e2e)', () => {
 
   beforeAll(async () => {
     process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET;
+    // CI has no Stripe key: signature checks need a client, never the network.
+    process.env.STRIPE_SECRET_KEY ||= 'sk_test_ci_placeholder';
     app = await createTestApp();
     prisma = app.get(PrismaService);
   });

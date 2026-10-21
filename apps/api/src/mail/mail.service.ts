@@ -8,9 +8,16 @@ function maskEmail(email: string): string {
   return `${local.slice(0, 1)}***@${domain ?? ''}`;
 }
 
+type SmtpConfig = {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+};
+
 export type Mail = { to: string; subject: string; text: string };
 
-// Without SMTP_URL, mails are logged instead of sent: the demo works without a
+// Without SMTP_HOST, mails are logged instead of sent: the demo works without a
 // mail provider (docs/billing.md, Payment reminders).
 @Injectable()
 export class MailService {
@@ -19,15 +26,25 @@ export class MailService {
   private readonly from: string;
 
   constructor(config: ConfigService) {
-    const smtpUrl = config.get<string | null>('smtpUrl');
-    this.transport = smtpUrl ? createTransport(smtpUrl) : null;
+    const smtp = config.get<SmtpConfig | null>('smtp');
+    this.transport = smtp
+      ? createTransport({
+          host: smtp.host,
+          port: smtp.port,
+          // 465 is implicit TLS; 587 is submission, where STARTTLS is required
+          // so credentials never travel in clear.
+          secure: smtp.port === 465,
+          requireTLS: smtp.port !== 465,
+          auth: { user: smtp.user, pass: smtp.password },
+        })
+      : null;
     this.from = config.getOrThrow<string>('mailFrom');
   }
 
   async send(mail: Mail): Promise<'sent' | 'logged'> {
     if (!this.transport) {
       this.logger.log(
-        `[mail not sent, no SMTP_URL] to=${maskEmail(mail.to)} subject="${mail.subject}"`,
+        `[mail not sent, no SMTP_HOST] to=${maskEmail(mail.to)} subject="${mail.subject}"`,
       );
       return 'logged';
     }

@@ -1,0 +1,42 @@
+# syntax=docker/dockerfile:1
+#
+# Build context is the monorepo ROOT:
+#   docker build -f apps/api/Dockerfile.migrate -t shobukapp-migrate .
+#
+# Throwaway image: applies pending migrations, then exits. It exists because
+# the api image drops the Prisma CLI and its engines on purpose.
+
+# The migration engine is a native binary with one variant per OpenSSL
+# version; the slim image lacks the library and Prisma would fall back with a
+# warning on every call.
+FROM node:24-bookworm-slim AS base
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+FROM base AS build
+ENV PNPM_HOME="/pnpm" \
+    PATH="/pnpm:$PATH" \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+WORKDIR /app
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+# Without --prod: the Prisma CLI is a devDependency, and it is the whole point.
+RUN pnpm install --frozen-lockfile --child-concurrency=1 --filter=@shobukapp/api...
+RUN rm -rf node_modules/.pnpm/@turbo+* node_modules/.pnpm/turbo@*
+
+COPY apps/api/prisma apps/api/prisma
+COPY apps/api/prisma.config.ts apps/api/
+
+FROM base AS runner
+# The CLI finds prisma.config.ts in the working directory, which reads
+# DATABASE_URL from the container environment (no .env is shipped).
+WORKDIR /app/apps/api
+COPY --from=build --chown=node:node /app /app
+USER node
+# deploy, never dev: applies existing migrations, writes none, and refuses to
+# act on a drifted database instead of resetting it.
+CMD ["node_modules/.bin/prisma", "migrate", "deploy"]

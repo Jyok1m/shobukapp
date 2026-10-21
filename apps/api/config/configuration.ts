@@ -21,7 +21,9 @@ function stripe(env: AppEnv) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || null;
   if (secretKey) {
     if (env !== 'production' && secretKey.startsWith('sk_live_')) {
-      throw new Error('A live Stripe key is refused outside APP_ENV=production');
+      throw new Error(
+        'A live Stripe key is refused outside APP_ENV=production',
+      );
     }
     if (env === 'production' && secretKey.startsWith('sk_test_')) {
       throw new Error('A test Stripe key is refused in APP_ENV=production');
@@ -31,6 +33,19 @@ function stripe(env: AppEnv) {
     }
   }
   return { enabled: Boolean(secretKey), secretKey, webhookSecret };
+}
+
+// Discrete variables rather than a URL: a mailbox password with URL-reserved
+// characters would otherwise need encoding, and a mistake there fails silently.
+function smtp() {
+  const host = process.env.SMTP_HOST || null;
+  if (!host) return null;
+  return {
+    host,
+    port: parseInt(process.env.SMTP_PORT ?? '', 10) || 587,
+    user: required('SMTP_USER'),
+    password: required('SMTP_PASSWORD'),
+  };
 }
 
 export default () => {
@@ -43,8 +58,8 @@ export default () => {
     sessionTtlDays: parseInt(process.env.SESSION_TTL_DAYS ?? '', 10) || 30,
     stripe: stripe(env),
     storageDir: process.env.STORAGE_DIR ?? './storage',
-    smtpUrl: process.env.SMTP_URL || null,
+    smtp: smtp(),
     mailFrom:
-      process.env.MAIL_FROM ?? 'Shobukan Dojo <no-reply@shobukan-dojo.com>',
+      process.env.MAIL_FROM ?? 'Shobukan Dojo <no-reply@joachimjasmin.com>',
   };
 };

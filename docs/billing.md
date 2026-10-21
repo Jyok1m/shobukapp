@@ -42,7 +42,7 @@ Stripe holds prices, cards, invoices and retries. The database holds a mirror go
 ## Payment reminders ("Relancer")
 
 - `POST /admin/members/:id/reminders { note? }` sends a French email to the practitioner with a link to `/abonnement`, and writes a `payment_reminders` row (author, date, note).
-- Without `SMTP_URL`, the email is logged instead of sent and the row is still written: the demo works without a mail provider.
+- Without `SMTP_HOST`, the email is logged instead of sent and the row is still written: the demo works without a mail provider.
 - Stripe's own dunning emails (Settings, Billing, Subscriptions and emails) complement this; enable them in the Stripe dashboard rather than reimplementing retries.
 
 ## Errors

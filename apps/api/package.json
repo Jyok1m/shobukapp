@@ -25,7 +25,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
-    "admin:grant": "ts-node src/scripts/admin-grant.ts"
+    "admin:grant": "ts-node src/scripts/admin-grant.ts",
+    "admin:invite": "ts-node src/scripts/admin-invite.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -92,5 +93,8 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }
