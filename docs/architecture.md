@@ -37,7 +37,7 @@ Admin routes live under `/admin/*` and carry `@Roles('ADMIN')` at the controller
 
 ```
 app/
-  (public)/            page.tsx (landing + plans), connexion/, inscription/, nous-rejoindre/,
+  (public)/            page.tsx (landing, no plans), connexion/, inscription/, nous-rejoindre/,
                        activation/, confidentialite/
   (first-login)/       premiere-connexion/: forced password change, minimal layout, no app API calls
   (app)/               layout.tsx checks the session, redirects to /connexion

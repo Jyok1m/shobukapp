@@ -45,9 +45,12 @@ describe('Billing (e2e)', () => {
       .expect(400);
   });
 
-  it('serves the plans publicly, without Stripe identifiers', async () => {
+  it('serves the plans to a member only, without Stripe identifiers', async () => {
+    await request(app.getHttpServer()).get('/billing/plans').expect(401);
+    const { cookie } = await registerUser(app);
     const res = await request(app.getHttpServer())
       .get('/billing/plans')
+      .set('Cookie', cookie)
       .expect(200);
     for (const plan of res.body as Record<string, unknown>[]) {
       expect(JSON.stringify(plan)).not.toMatch(/stripe/i);

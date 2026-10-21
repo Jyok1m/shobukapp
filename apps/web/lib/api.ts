@@ -35,13 +35,6 @@ export async function apiGet<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-/* Public API read, without cookies (pages shown before signup). */
-export async function publicApiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`GET ${path} failed with status ${res.status}`);
-  return (await res.json()) as T;
-}
-
 /*
  * Preview of a signup link. The token never goes into an error message: those
  * end up in server logs and error digests. A 429 is an expected answer here.

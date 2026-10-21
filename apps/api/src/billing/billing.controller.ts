@@ -40,8 +40,7 @@ export class BillingController {
     private readonly webhook: WebhookService,
   ) {}
 
-  // Public: the plans page shows before signup.
-  @Public()
+  // Members only: the price grid is not shown to visitors.
   @Get('plans')
   listPlans(): Promise<PublicPlan[]> {
     return this.plans.listPublic();

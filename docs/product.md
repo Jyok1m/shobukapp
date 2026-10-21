@@ -8,7 +8,7 @@ The UI is in French. This file names the screens by their French label in quotes
 
 | Role | How one gets it | Can |
 |---|---|---|
-| Visitor | not signed in | see the public plans, sign up, sign in |
+| Visitor | not signed in | sign up, sign in (the plans and prices are only shown once signed in) |
 | `PRACTITIONER` | invitation from an admin (`onboarding.md`) | everything in "Practitioner features" below |
 | `ADMIN` | `admin:grant <email>` on the server | everything a practitioner can, plus "Admin features" |
 
