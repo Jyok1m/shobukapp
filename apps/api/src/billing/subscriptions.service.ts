@@ -334,7 +334,7 @@ export class SubscriptionsService {
       const invoice = updated.latest_invoice;
       if (invoice && typeof invoice !== 'string' && invoice.status === 'open') {
         await stripe.invoices
-          .voidInvoice(invoice.id!)
+          .voidInvoice(invoice.id)
           .catch((error: unknown) =>
             this.logger.warn(`Could not void ${invoice.id}: ${String(error)}`),
           );
