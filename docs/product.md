@@ -1,0 +1,42 @@
+# Product
+
+ShobukApp is the member space of the Shobukan Dojo. It replaces paper forms, bank transfer follow-ups and scattered licence PDFs with one place for practitioners and one dashboard for the dojo's administrators.
+
+The UI is in French. This file names the screens by their French label in quotes when it helps.
+
+## Roles
+
+| Role | How one gets it | Can |
+|---|---|---|
+| Visitor | not signed in | see the public plans, sign up, sign in |
+| `PRACTITIONER` | self signup | everything in "Practitioner features" below |
+| `ADMIN` | `admin:grant <email>` on the server | everything a practitioner can, plus "Admin features" |
+
+"Member" means a practitioner with an `active` or `trialing` subscription. It is a **computed status**, not a role: it drives what the UI highlights (membership card, directory badge), never what the API authorizes, except where a rule below says so.
+
+Open question: if the dojo needs a third role (for example a board member who sees payments but cannot edit plans), it becomes a new enum value and a guard, not a flag.
+
+## Practitioner features
+
+- Sign up with email and password, sign in, sign out ("Inscription", "Connexion").
+- See the dojo plans and buy one through Stripe Checkout, then manage it (card, invoices, cancellation) through the Stripe Customer Portal ("Mon abonnement").
+- See the directory of members who opted in: name, photo, phone, email ("Annuaire").
+- Send and receive 1:1 messages with other members ("Messagerie").
+- Upload, replace, rename and delete their own documents, first of all the medical certificate ("Mes documents").
+- See their FFK licences, one per season, and download the PDF ("Mes licences").
+- Edit their profile (first name, last name, phone, photo) and the legal information required for the FFK licence (birth date, sex, nationality, address, emergency contact) ("Mon profil").
+- Choose whether they appear in the directory.
+
+## Admin features
+
+- CRUD on plans, synchronised with Stripe products and prices ("Formules").
+- List practitioners with their subscription status, last payment and failed payments; open a practitioner's detail ("Pratiquants").
+- Send a payment reminder to a practitioner, logged with its author and date ("Relancer").
+- CRUD on dojo documents: legal (statuts, règlement intérieur, assurance) and accounting (bilans, factures) ("Documents du dojo").
+- Upload FFK licences for a practitioner and season.
+- CRUD on member information, except the password, and export the members list as CSV ("Membres", "Exporter").
+- See (not edit) practitioners' medical certificates and their validity date.
+
+## Out of scope for now
+
+Online class booking, attendance, grading (passages de grades) history, accounting ledger, multi-dojo tenancy, mobile app, group conversations, real-time chat. Each one is a candidate for a later doc, not an implicit promise.
