@@ -13,7 +13,7 @@
 
 - `GET /documents`, `POST /documents` (multipart), `PATCH /documents/:id` (title, valid until), `DELETE /documents/:id`, `GET /documents/:id/file`.
 - Only the owner and admins can read a member document. A practitioner asking for someone else's document gets 404, not 403: no existence oracle.
-- `MEDICAL_CERTIFICATE` carries `valid_until`. The admin list shows missing or expired certificates.
+- `MEDICAL_CERTIFICATE` requires `valid_until` (refused without it: the dojo could not check it). The admin list shows missing or expired certificates.
 - Deleting a document deletes the row, then the stored file (same reason as erasure, `privacy.md`).
 
 ## Dojo documents ("Documents du dojo", admin)

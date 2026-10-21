@@ -177,6 +177,7 @@ describe('Admin members (e2e)', () => {
       .set('Cookie', member.cookie)
       .field('title', 'Certificat')
       .field('category', 'MEDICAL_CERTIFICATE')
+      .field('validUntil', '2027-09-01')
       .attach('file', PDF, {
         filename: 'c.pdf',
         contentType: 'application/pdf',

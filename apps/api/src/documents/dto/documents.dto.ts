@@ -24,21 +24,30 @@ class DocumentFieldsDto {
   @IsString()
   @Length(1, 120)
   title!: string;
-
-  @IsOptional()
-  @Transform(dateOrNull)
-  @IsDateString({ strict: true })
-  validUntil?: string | null;
 }
 
 export class CreateMemberDocumentDto extends DocumentFieldsDto {
   @IsIn(MEMBER_CATEGORIES)
   category!: (typeof MEMBER_CATEGORIES)[number];
+
+  // A medical certificate without an end date cannot be checked by the dojo.
+  @ValidateIf(
+    (dto: CreateMemberDocumentDto) =>
+      dto.category === 'MEDICAL_CERTIFICATE' || dto.validUntil != null,
+  )
+  @Transform(dateOrNull)
+  @IsDateString({ strict: true })
+  validUntil?: string | null;
 }
 
 export class CreateDojoDocumentDto extends DocumentFieldsDto {
   @IsIn(DOJO_CATEGORIES)
   category!: (typeof DOJO_CATEGORIES)[number];
+
+  @IsOptional()
+  @Transform(dateOrNull)
+  @IsDateString({ strict: true })
+  validUntil?: string | null;
 }
 
 export class UpdateDocumentDto {

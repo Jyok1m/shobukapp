@@ -54,6 +54,17 @@ describe('Documents and licences (e2e)', () => {
       })
       .expect(400);
 
+    await request(server)
+      .post('/documents')
+      .set('Cookie', owner.cookie)
+      .field('title', 'Sans date')
+      .field('category', 'MEDICAL_CERTIFICATE')
+      .attach('file', PDF, {
+        filename: 'c.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(400);
+
     const created = await request(server)
       .post('/documents')
       .set('Cookie', owner.cookie)
