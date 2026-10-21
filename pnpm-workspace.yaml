@@ -1,0 +1,15 @@
+---
+packages:
+  - apps/*
+
+allowBuilds:
+  "@parcel/watcher": true
+  "@prisma/engines": true
+  "@swc/core": true
+  msgpackr-extract: false
+  prisma: true
+  sharp: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - "@rolldown/binding-openharmony-arm64@1.2.8"
