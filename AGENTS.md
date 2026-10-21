@@ -21,7 +21,8 @@ The database URL is not known yet: it arrives later through `DATABASE_URL`. Unti
 - Repo root: `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm typecheck` (via turbo).
 - One package: `pnpm --filter @shobukapp/<api|web> <script>`.
 - Dependency: `pnpm --filter @shobukapp/<pkg> add <dep>`. Never npm install nor yarn.
-- **Tests come in two commands.** `pnpm --filter @shobukapp/api test` only runs unit tests, `pnpm --filter @shobukapp/api test:e2e` runs the e2e suite with its own config. Run both before committing a backend change.
+- **Tests come in two commands.** `pnpm --filter @shobukapp/api test` only runs unit tests, `pnpm --filter @shobukapp/api test:e2e` runs the e2e suite with its own config. Run both before committing a backend change. The e2e suite needs the database of `DATABASE_URL` migrated, and only removes users under `@e2e.shobukapp.test`.
+- Jest runs with `--experimental-vm-modules` (baked into the scripts): `@nestjs/config` 12 is ESM-only and Jest cannot `require()` it otherwise. Call the scripts, not `jest` directly.
 - Database: `pnpm --filter @shobukapp/api db:migrate` (create and apply a migration), `db:deploy` (apply existing ones), `db:generate` (client only), `db:studio`, `db:seed`.
 - Admin right: `pnpm --filter @shobukapp/api admin:grant <email>`. No HTTP route can grant it.
 - Stripe in development: `stripe listen --forward-to localhost:3001/billing/webhook`, the printed secret goes in `STRIPE_WEBHOOK_SECRET`.
