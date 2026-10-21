@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import type Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
 import type { SelfUser } from '../common/self-user';
+import { MailService } from '../mail/mail.service';
 import type { PlanInterval } from '../generated/prisma/enums';
 import { frequencyOf } from './plans.service';
 import { MODE_FIELDS, StripeMode, StripeService } from './stripe.service';
@@ -52,6 +53,8 @@ export type MembershipView = {
   manageable: boolean;
   // Test mode: the page tells members payments are simulated.
   testMode: boolean;
+  // Live mode, and a cotisation paid in test mode: it does not carry over.
+  testCotisationNotCarried: boolean;
   payments: {
     id: string;
     amountCents: number;
@@ -81,9 +84,43 @@ export class SubscriptionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
+    private readonly mail: MailService,
     config: ConfigService,
   ) {
     this.webUrl = config.getOrThrow<string>('webUrl');
+  }
+
+  /*
+   * After the switch to live: members holding a test cotisation learn it does
+   * not carry over. Their profile, documents and messages do: only Stripe
+   * objects depend on the mode.
+   */
+  async notifyTestCotisationsEnded(): Promise<number> {
+    const members = await this.prisma.user.findMany({
+      where: {
+        subscriptions: {
+          some: { livemode: false, status: { in: MEMBER_STATUSES } },
+        },
+      },
+      select: { email: true, firstName: true },
+    });
+    for (const member of members) {
+      await this.mail
+        .send({
+          to: member.email,
+          subject: 'Shobukan Dojo : votre cotisation est à régler',
+          text: [
+            `Bonjour ${member.firstName},`,
+            '',
+            'Le dojo passe aux paiements réels. La cotisation réglée pendant la période de démonstration (carte de test) n’est pas reprise.',
+            `Votre profil, vos documents et vos messages sont conservés. Il vous reste seulement à régler votre cotisation : ${this.webUrl}/cotisation`,
+            '',
+            'Le bureau du Shobukan Dojo',
+          ].join('\n'),
+        })
+        .catch(() => undefined);
+    }
+    return members.length;
   }
 
   /*
@@ -118,6 +155,12 @@ export class SubscriptionsService {
       }),
     ]);
     const subscription = pickCurrent(subscriptions);
+    const testLeftover =
+      livemode &&
+      !subscription &&
+      (await this.prisma.subscription.count({
+        where: { userId, livemode: false, status: { in: MEMBER_STATUSES } },
+      })) > 0;
     return {
       status: subscription?.status ?? null,
       isMember: MEMBER_STATUSES.includes(subscription?.status ?? ''),
@@ -133,6 +176,7 @@ export class SubscriptionsService {
         (subscriptions.length > 0 || payments.length > 0),
       ),
       testMode: mode === 'test',
+      testCotisationNotCarried: testLeftover,
       payments,
     };
   }
@@ -182,12 +226,91 @@ export class SubscriptionsService {
       subscription_data: {
         metadata: { userId: user.id, planId: plan.id, frequency },
       },
+      ...(mode === 'test' && {
+        custom_text: {
+          submit: {
+            message:
+              "Paiement de démonstration : utilisez la carte 4242 4242 4242 4242, une date d'expiration future et n'importe quel code. Aucune somme n'est débitée, et cette cotisation ne sera pas reprise quand le dojo passera aux paiements réels.",
+          },
+        },
+      }),
       success_url: `${this.webUrl}/cotisation?paiement=succes`,
       cancel_url: `${this.webUrl}/cotisation?paiement=annule`,
       locale: 'fr',
     });
     if (!session.url) throw new Error('Stripe returned no checkout URL');
     return { url: session.url };
+  }
+
+  /*
+   * Changing frequency (docs/billing.md, Changing frequency): same cotisation,
+   * another of its prices. Stripe invoices the difference at once, crediting
+   * the unused time; the change only applies if that payment succeeds.
+   */
+  private async frequencyChange(user: SelfUser, frequency: PlanInterval) {
+    const { mode, client: stripe } = await this.stripe.requireCurrent();
+    const subscriptions = await this.prisma.subscription.findMany({
+      where: { userId: user.id, livemode: mode === 'live' },
+    });
+    const current = pickCurrent(subscriptions);
+    if (
+      !current ||
+      !ACTIVE_STATUSES.includes(current.status) ||
+      !current.planId
+    ) {
+      throw new ConflictException({ code: 'no_active_cotisation' });
+    }
+    if (current.frequency === frequency) {
+      throw new ConflictException({ code: 'same_frequency' });
+    }
+    const price = await this.prisma.planPrice.findUnique({
+      where: { planId_frequency: { planId: current.planId, frequency } },
+    });
+    const priceId = price?.active ? price[MODE_FIELDS[mode].price] : null;
+    if (!priceId)
+      throw new NotFoundException({ code: 'frequency_not_offered' });
+
+    const remote = await stripe.subscriptions.retrieve(
+      current.stripeSubscriptionId,
+    );
+    const item = remote.items.data[0];
+    if (!item) throw new ConflictException({ code: 'no_active_cotisation' });
+    return { stripe, mode, current, remote, item, priceId };
+  }
+
+  async previewFrequencyChange(user: SelfUser, frequency: PlanInterval) {
+    const { stripe, remote, item, priceId } = await this.frequencyChange(
+      user,
+      frequency,
+    );
+    const invoice = await stripe.invoices.createPreview({
+      customer: stripeId(remote.customer) ?? undefined,
+      subscription: remote.id,
+      subscription_details: {
+        items: [{ id: item.id, price: priceId }],
+        proration_behavior: 'always_invoice',
+      },
+    });
+    return {
+      amountDueCents: invoice.amount_due,
+      currency: invoice.currency,
+    };
+  }
+
+  async changeFrequency(user: SelfUser, frequency: PlanInterval) {
+    const { stripe, mode, remote, item, priceId } = await this.frequencyChange(
+      user,
+      frequency,
+    );
+    await stripe.subscriptions.update(remote.id, {
+      items: [{ id: item.id, price: priceId }],
+      proration_behavior: 'always_invoice',
+      // Not applied until the prorated invoice is paid: a declined card
+      // leaves the current frequency in place.
+      payment_behavior: 'pending_if_incomplete',
+    });
+    await this.syncFromStripe(remote.id, mode);
+    return this.membership(user.id);
   }
 
   async portal(userId: string): Promise<{ url: string }> {

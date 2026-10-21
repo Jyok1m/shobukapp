@@ -221,6 +221,26 @@ describe('Admin accounts, roles and Stripe mode (e2e)', () => {
       .set('Cookie', member.cookie)
       .expect(200);
     expect(live.body).toMatchObject({ isMember: true, status: 'active' });
+
+    // A test cotisation does not carry over to live, and the member is told.
+    const tester = await registerUser(app);
+    await prisma.subscription.create({
+      data: {
+        userId: tester.id,
+        stripeSubscriptionId: `sub_test_${tester.id}`,
+        status: 'active',
+        livemode: false,
+      },
+    });
+    const told = await request(server)
+      .get('/billing/subscription')
+      .set('Cookie', tester.cookie)
+      .expect(200);
+    expect(told.body).toMatchObject({
+      isMember: false,
+      testMode: false,
+      testCotisationNotCarried: true,
+    });
     await prisma.appSettings.update({
       where: { id: 1 },
       data: { stripeLive: false },

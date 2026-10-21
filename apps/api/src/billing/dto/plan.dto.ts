@@ -116,3 +116,8 @@ export class StripeModeDto {
   @MaxLength(128)
   password!: string;
 }
+
+export class FrequencyDto {
+  @IsEnum(PlanInterval)
+  frequency!: PlanInterval;
+}

@@ -21,6 +21,7 @@ import type { SelfUser } from '../common/self-user';
 import {
   CheckoutDto,
   CreatePlanDto,
+  FrequencyDto,
   StripeModeDto,
   UpdatePlanDto,
 } from './dto/plan.dto';
@@ -58,6 +59,19 @@ export class BillingController {
     @Body() dto: CheckoutDto,
   ): Promise<{ url: string }> {
     return this.subscriptions.checkout(user, dto.planId, dto.frequency);
+  }
+
+  @Post('subscription/frequency/preview')
+  @HttpCode(200)
+  previewFrequency(@CurrentUser() user: SelfUser, @Body() dto: FrequencyDto) {
+    return this.subscriptions.previewFrequencyChange(user, dto.frequency);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('subscription/frequency')
+  @HttpCode(200)
+  changeFrequency(@CurrentUser() user: SelfUser, @Body() dto: FrequencyDto) {
+    return this.subscriptions.changeFrequency(user, dto.frequency);
   }
 
   @Post('portal')
@@ -113,6 +127,7 @@ export class AdminBillingSettingsController {
     private readonly plans: PlansService,
     private readonly auth: AuthService,
     private readonly prisma: PrismaService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   @Get()
@@ -147,8 +162,13 @@ export class AdminBillingSettingsController {
     if (!this.stripe.configured(dto.mode)) {
       throw new ConflictException({ code: 'stripe_mode_unavailable' });
     }
+    const previous = await this.stripe.mode();
     await this.plans.syncAllForMode(dto.mode);
     await this.stripe.setMode(dto.mode, admin.id);
-    return this.get();
+    const notified =
+      previous === 'test' && dto.mode === 'live'
+        ? await this.subscriptions.notifyTestCotisationsEnded()
+        : 0;
+    return { ...(await this.get()), notified };
   }
 }

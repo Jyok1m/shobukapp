@@ -10,7 +10,15 @@ A cotisation (a plan, "Adulte", "Étudiant") can be paid **yearly, quarterly or 
 - One Stripe product per plan and mode, one price per frequency under it.
 - A plan must offer at least one frequency (`no_frequency_offered`); a frequency appears once per plan (`duplicate_frequency`). `PATCH /admin/plans/:id {prices: [...]}` creates or updates the listed frequencies and leaves the others untouched.
 - A frequency whose amount changes gets a new Stripe price, the old one deactivated. Changed while not offered, its price is dropped and recreated when offered again: an old amount must never come back.
-- `subscriptions.frequency` is copied from the Stripe price at each sync. Changing frequency later goes through the Customer Portal if the dojo enables plan switching there; otherwise cancel and pay again.
+- `subscriptions.frequency` is copied from the Stripe price at each sync.
+
+## Changing frequency
+
+`POST /billing/subscription/frequency/preview {frequency}` returns the amount due now; `POST /billing/subscription/frequency {frequency}` applies it. Same cotisation, another of its offered prices; only for an `active` or `trialing` cotisation of the current mode (`no_active_cotisation`, `same_frequency`, `frequency_not_offered`).
+
+- `proration_behavior: always_invoice`: Stripe invoices the difference at once and credits the unused time (monthly 25 € to yearly 240 € costs 215 € today; checked against Stripe test mode). An interval change also restarts the billing period.
+- `payment_behavior: pending_if_incomplete`: the change only applies once that invoice is paid. A declined card leaves the current frequency in place.
+- The subscription is re-synced right away; the webhook confirms it.
 - Migration `plan_frequencies` turned each existing plan into one price row at its former interval, Stripe ids included.
 
 ## Plans (admin CRUD)
@@ -68,6 +76,8 @@ Production carries two Stripe key pairs (`STRIPE_TEST_*`, `STRIPE_LIVE_*`); an a
 - **Only the current mode counts**: membership, payment history, admin lists and the export read the subscriptions and payments of the current mode. After going live, a subscription paid with a test card makes nobody a member.
 - **Plan edits reach the current mode only.** Switching runs `syncAllForMode` first: every plan gets its product and price in the target mode as the row describes it now (amount, interval, name, archived), comparing with the live price at Stripe. If Stripe refuses, the mode does not change.
 - **One webhook URL for both modes**: declare the endpoint twice in Stripe (once in test, once in live), each with its own secret. The API tries each configured secret and takes the mode from `event.livemode`.
+- **Test mode is announced everywhere money is involved**: Stripe Checkout shows a submit message (card 4242 4242 4242 4242, nothing debited, not carried over to live), and `/cotisation` shows the same notice (`testMode`).
+- **Switching to live does not carry test cotisations over**, by design: they were paid with a test card. Members holding one get a mail at the switch, and `/cotisation` tells them (`testCotisationNotCarried`). Everything else carries over: accounts, profiles, documents, licences, messages are not tied to a mode, only Stripe objects are.
 - A mode without key is unavailable (409 `stripe_mode_unavailable`). Without the current mode's key, billing answers 503 `billing_disabled`.
 - Migration `roles_and_stripe_modes` renamed the existing ids to the test columns: everything created so far came from a test key.
 

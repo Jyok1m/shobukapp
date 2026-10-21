@@ -35,6 +35,7 @@ function setup(subscription: object) {
   const service = new SubscriptionsService(
     prisma as never,
     { require: () => stripe } as never,
+    { send: jest.fn() } as never,
     { getOrThrow: () => 'http://localhost:3000' } as never,
   );
   return { service, prisma };
