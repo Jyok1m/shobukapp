@@ -9,9 +9,15 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Th } from "@/components/ui/table";
 import { apiRequest } from "@/lib/client-api";
-import { formatAmount, intervalNames } from "@/lib/format";
+import { formatPrices } from "@/lib/format";
 import type { AdminPlan } from "@/lib/types";
 import { PlanEditDialog } from "./plan-edit-dialog";
+
+function PricesCell({ plan }: { plan: AdminPlan }) {
+  const offered = plan.prices.filter((price) => price.active);
+  if (offered.length === 0) return <span className="text-muted">Aucune fréquence proposée</span>;
+  return <>{formatPrices(offered, plan.currency)}</>;
+}
 
 export function PlansTable({ plans }: { plans: AdminPlan[] }) {
   const router = useRouter();
@@ -58,7 +64,7 @@ export function PlansTable({ plans }: { plans: AdminPlan[] }) {
         <thead>
           <tr>
             <Th>Formule</Th>
-            <Th>Tarif</Th>
+            <Th>Tarifs</Th>
             <Th>Stripe</Th>
             <Th>Statut</Th>
             <Th>
@@ -75,9 +81,8 @@ export function PlansTable({ plans }: { plans: AdminPlan[] }) {
                   <p className="font-medium">{plan.name}</p>
                   {plan.description && <p className="mt-0.5 line-clamp-2 text-xs text-muted">{plan.description}</p>}
                 </Td>
-                <Td className="whitespace-nowrap">
-                  {formatAmount(plan.amountCents, plan.currency)}
-                  <span className="block text-xs text-muted">{intervalNames[plan.interval]}</span>
+                <Td className="min-w-48">
+                  <PricesCell plan={plan} />
                 </Td>
                 <Td className="whitespace-nowrap">
                   <Badge tone={synced ? "success" : "danger"}>

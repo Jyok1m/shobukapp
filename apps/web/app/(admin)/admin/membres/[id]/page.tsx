@@ -16,7 +16,7 @@ import { ProfileForm } from "@/components/profile/profile-form";
 import { Badge } from "@/components/ui/badge";
 import { Notice } from "@/components/ui/notice";
 import { apiFetch, apiGet } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { cotisationLabel, formatDate } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import type { AdminMemberDetail, License, MemberDocument } from "@/lib/types";
 
@@ -86,6 +86,9 @@ async function MemberDetail({ params, searchParams }: { params: Promise<{ id: st
           <span aria-hidden>·</span>
           <span>Inscrit le {formatDate(member.createdAt)}</span>
           <MembershipBadge status={member.membership.status} />
+          {member.membership.planName && (
+            <span className="text-ink">{cotisationLabel(member.membership.planName, member.membership.frequency)}</span>
+          )}
           {member.role === "ADMIN" && <Badge tone="accent">Admin</Badge>}
         </div>
       </div>

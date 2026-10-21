@@ -25,6 +25,8 @@ export const apiErrorMessages: Record<string, string> = {
   password_change_required: "Choisissez votre propre mot de passe avant de continuer.",
   password_unchanged: "Le nouveau mot de passe doit être différent du mot de passe provisoire.",
   terms_required: "Vous devez accepter les conditions d'utilisation pour continuer.",
+  no_frequency_offered: "Proposez au moins une fréquence de paiement.",
+  duplicate_frequency: "Chaque fréquence de paiement ne peut apparaître qu'une fois par formule.",
   invalid_invitation: "Ce lien ou ce code d'inscription n'est plus valable.",
   join_request_not_found: "Cette demande est introuvable. Elle a peut-être été supprimée.",
   invitation_not_found: "Cette invitation n'est plus en attente : elle a déjà été utilisée, révoquée ou a expiré.",

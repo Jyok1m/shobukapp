@@ -1,7 +1,7 @@
 import { MembershipBadge } from "@/components/membership-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Th } from "@/components/ui/table";
-import { formatShortDate } from "@/lib/format";
+import { cotisationLabel, formatShortDate } from "@/lib/format";
 import type { AdminMemberDetail } from "@/lib/types";
 
 export function SubscriptionsTable({ subscriptions }: { subscriptions: AdminMemberDetail["subscriptions"] }) {
@@ -22,7 +22,9 @@ export function SubscriptionsTable({ subscriptions }: { subscriptions: AdminMemb
       <tbody>
         {subscriptions.map((subscription, index) => (
           <tr key={`${subscription.createdAt}-${index}`}>
-            <Td className="min-w-40">{subscription.plan?.name ?? <span className="text-muted">Formule supprimée</span>}</Td>
+            <Td className="min-w-40">{cotisationLabel(subscription.plan?.name ?? null, subscription.frequency) ?? (
+                <span className="text-muted">Formule supprimée</span>
+              )}</Td>
             <Td className="whitespace-nowrap">
               <MembershipBadge status={subscription.status} />
               {subscription.cancelAtPeriodEnd && (

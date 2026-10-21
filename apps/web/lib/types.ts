@@ -47,30 +47,42 @@ export type DirectoryPage = {
   nextCursor: string | null;
 };
 
-export type PlanInterval = "MONTH" | "YEAR";
+/* How often a cotisation is paid: each plan offers one to three of these (docs/billing.md, Frequencies). */
+export type Frequency = "YEAR" | "QUARTER" | "MONTH";
 
+export type PublicPlanPrice = {
+  frequency: Frequency;
+  amountCents: number;
+  purchasable: boolean;
+};
+
+/* GET /billing/plans: active plans with at least one active price, prices ordered YEAR, QUARTER, MONTH. */
 export type PublicPlan = {
   id: string;
   name: string;
   description: string | null;
-  amountCents: number;
   currency: string;
-  interval: PlanInterval;
-  purchasable: boolean;
+  prices: PublicPlanPrice[];
+};
+
+export type AdminPlanPrice = {
+  id: string;
+  frequency: Frequency;
+  amountCents: number;
+  active: boolean;
+  stripeTestPriceId: string | null;
+  stripeLivePriceId: string | null;
 };
 
 export type AdminPlan = {
   id: string;
   name: string;
   description: string | null;
-  amountCents: number;
   currency: string;
-  interval: PlanInterval;
+  prices: AdminPlanPrice[];
   stripeTestProductId: string | null;
-  stripeTestPriceId: string | null;
   stripeLiveProductId: string | null;
-  stripeLivePriceId: string | null;
-  /* Product and price exist in the current Stripe mode. */
+  /* Product and every active price exist in the current Stripe mode. */
   synced: boolean;
   active: boolean;
   sortOrder: number;
@@ -94,6 +106,7 @@ export type Membership = {
   status: string | null;
   isMember: boolean;
   planName: string | null;
+  frequency: Frequency | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   manageable: boolean;
@@ -117,6 +130,7 @@ export type AdminMemberListItem = {
     status: string | null;
     isMember: boolean;
     planName: string | null;
+    frequency: Frequency | null;
     currentPeriodEnd: string | null;
     cancelAtPeriodEnd: boolean;
   };
@@ -148,6 +162,7 @@ export type AdminMemberDetail = SelfUser & {
     currentPeriodEnd: string | null;
     cancelAtPeriodEnd: boolean;
     createdAt: string;
+    frequency: Frequency | null;
     plan: { name: string } | null;
   }[];
   payments: Payment[];

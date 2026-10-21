@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { PlanCard, PlanGrid } from "@/components/billing/plan-card";
+import { PlanCard, PlanGrid, PriceList } from "@/components/billing/plan-card";
 import { buttonClasses } from "@/components/ui/button";
 import { publicApiGet } from "@/lib/api";
 import type { PublicPlan } from "@/lib/types";
@@ -20,15 +20,12 @@ async function Plans() {
   return (
     <PlanGrid>
       {plans.map((plan) => (
-        <PlanCard
-          key={plan.id}
-          plan={plan}
-          action={
-            <Link href="/nous-rejoindre" className={buttonClasses("primary", "md", "w-full")}>
-              Nous rejoindre
-            </Link>
-          }
-        />
+        <PlanCard key={plan.id} plan={plan}>
+          <PriceList plan={plan} />
+          <Link href="/nous-rejoindre" className={buttonClasses("primary", "md", "w-full")}>
+            Nous rejoindre
+          </Link>
+        </PlanCard>
       ))}
     </PlanGrid>
   );

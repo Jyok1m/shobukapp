@@ -1,10 +1,15 @@
 import type { BadgeTone } from "@/components/ui/badge";
-import type { PaymentStatus, PlanInterval, SelfUser } from "./types";
+import type { Frequency, PaymentStatus, SelfUser } from "./types";
 
+/* "250 €" for whole amounts, "15,50 €" otherwise. */
 export function formatAmount(amountCents: number, currency: string): string {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: currency.toUpperCase() }).format(
-    amountCents / 100,
-  );
+  const whole = amountCents % 100 === 0;
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amountCents / 100);
 }
 
 export function formatDate(value: string | Date): string {
@@ -15,15 +20,48 @@ export function formatShortDate(value: string | Date): string {
   return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeZone: "Europe/Paris" }).format(new Date(value));
 }
 
-export const intervalLabels: Record<PlanInterval, string> = {
-  MONTH: "par mois",
+export const FREQUENCIES: Frequency[] = ["YEAR", "QUARTER", "MONTH"];
+
+/* "250 € par an" */
+export const frequencyUnits: Record<Frequency, string> = {
   YEAR: "par an",
+  QUARTER: "par trimestre",
+  MONTH: "par mois",
 };
 
-export const intervalNames: Record<PlanInterval, string> = {
-  MONTH: "Mensuelle",
-  YEAR: "Annuelle",
+/* "250 € / an", compact lists. */
+export const frequencyShortUnits: Record<Frequency, string> = {
+  YEAR: "an",
+  QUARTER: "trimestre",
+  MONTH: "mois",
 };
+
+/* Frequency names: admin form rows and the member's checkout. */
+export const frequencyNames: Record<Frequency, string> = {
+  YEAR: "Annuel",
+  QUARTER: "Trimestriel",
+  MONTH: "Mensuel",
+};
+
+/* Agrees with "cotisation": "Adulte · trimestrielle". */
+export const frequencyAdjectives: Record<Frequency, string> = {
+  YEAR: "annuelle",
+  QUARTER: "trimestrielle",
+  MONTH: "mensuelle",
+};
+
+export const paymentsPerYear: Record<Frequency, number> = { YEAR: 1, QUARTER: 4, MONTH: 12 };
+
+/* "Adulte · trimestrielle", or the plan alone when the frequency is unknown. */
+export function cotisationLabel(planName: string | null, frequency: Frequency | null): string | null {
+  if (!planName) return null;
+  return frequency ? `${planName} · ${frequencyAdjectives[frequency]}` : planName;
+}
+
+/* "250 € / an · 70 € / trimestre · 25 € / mois" */
+export function formatPrices(prices: { frequency: Frequency; amountCents: number }[], currency: string): string {
+  return prices.map((price) => `${formatAmount(price.amountCents, currency)} / ${frequencyShortUnits[price.frequency]}`).join(" · ");
+}
 
 /* Stripe subscription statuses, in French (docs/design.md). */
 const membershipStatuses: Record<string, { label: string; tone: BadgeTone }> = {

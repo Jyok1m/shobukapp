@@ -5,7 +5,7 @@ import { MembershipBadge } from "@/components/membership-badge";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { apiGet } from "@/lib/api";
-import { formatDate, profileCompleteness } from "@/lib/format";
+import { cotisationLabel, formatDate, profileCompleteness } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import type { Membership } from "@/lib/types";
 
@@ -50,7 +50,9 @@ async function MembershipSummary() {
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <MembershipBadge status={membership.status} />
-          {membership.planName && <span className="text-sm text-ink">{membership.planName}</span>}
+          {membership.planName && (
+            <span className="text-sm text-ink">{cotisationLabel(membership.planName, membership.frequency)}</span>
+          )}
         </div>
         <p className="text-sm text-muted">
           {membership.isMember && membership.currentPeriodEnd

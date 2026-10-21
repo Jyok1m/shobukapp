@@ -1,19 +1,29 @@
 import type { ReactNode } from "react";
-import { formatAmount, intervalLabels } from "@/lib/format";
+import { formatAmount, frequencyUnits } from "@/lib/format";
 import type { PublicPlan } from "@/lib/types";
 
-export function PlanCard({ plan, action }: { plan: PublicPlan; action?: ReactNode }) {
+/* Static list of the offered frequencies (public landing, no purchase there). */
+export function PriceList({ plan }: { plan: PublicPlan }) {
+  return (
+    <ul className="flex flex-col gap-1">
+      {plan.prices.map((price) => (
+        <li key={price.frequency} className="flex items-baseline gap-2">
+          <span className="text-xl font-semibold text-ink">{formatAmount(price.amountCents, plan.currency)}</span>
+          <span className="text-sm text-muted">{frequencyUnits[price.frequency]}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function PlanCard({ plan, children }: { plan: PublicPlan; children: ReactNode }) {
   return (
     <li className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5 shadow-xs sm:p-6">
       <div className="flex flex-col gap-1">
         <h3 className="font-serif text-lg font-semibold text-ink">{plan.name}</h3>
-        <p className="text-2xl font-semibold text-ink">
-          {formatAmount(plan.amountCents, plan.currency)}{" "}
-          <span className="text-sm font-normal text-muted">{intervalLabels[plan.interval]}</span>
-        </p>
+        {plan.description && <p className="text-sm whitespace-pre-line text-muted">{plan.description}</p>}
       </div>
-      {plan.description && <p className="text-sm whitespace-pre-line text-muted">{plan.description}</p>}
-      {action && <div className="mt-auto pt-2">{action}</div>}
+      <div className="mt-auto flex flex-col gap-4">{children}</div>
     </li>
   );
 }

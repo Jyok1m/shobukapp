@@ -30,9 +30,8 @@ export function PlanCreateForm() {
     const result = await apiRequest<AdminPlan>("POST", "/admin/plans", {
       name: values.name,
       ...(values.description && { description: values.description }),
-      amountCents: values.amountCents,
-      interval: values.interval,
       sortOrder: values.sortOrder,
+      prices: values.prices,
     });
     setPending(false);
     if (!result.ok) return setError(result.error);

@@ -5,14 +5,14 @@ import { PageHeader } from "@/components/page-header";
 import { MembershipBadge } from "@/components/membership-badge";
 import { PaymentReturnNotice } from "@/components/billing/payment-return-notice";
 import { PaymentsTable } from "@/components/billing/payments-table";
-import { PlanCard, PlanGrid } from "@/components/billing/plan-card";
+import { PlanCard, PlanGrid, PriceList } from "@/components/billing/plan-card";
+import { PlanCheckout } from "@/components/billing/plan-checkout";
 import { PortalButton } from "@/components/billing/portal-button";
-import { SubscribeButton } from "@/components/billing/subscribe-button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { apiGet } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { cotisationLabel, formatDate } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import type { Membership, PublicPlan } from "@/lib/types";
 
@@ -22,13 +22,13 @@ export const metadata: Metadata = { title: "Ma cotisation" };
 const OUTSTANDING = ["past_due", "unpaid"];
 
 function MembershipCard({ membership }: { membership: Membership }) {
-  const { status, isMember, planName, currentPeriodEnd, cancelAtPeriodEnd, manageable } = membership;
+  const { status, isMember, planName, frequency, currentPeriodEnd, cancelAtPeriodEnd, manageable } = membership;
   return (
     <Card>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-serif text-lg font-semibold text-ink">{planName ?? "Aucune formule"}</h2>
+            <h2 className="font-serif text-lg font-semibold text-ink">{cotisationLabel(planName, frequency) ?? "Aucune formule"}</h2>
             <MembershipBadge status={status} />
           </div>
           {isMember && currentPeriodEnd && (
@@ -68,7 +68,7 @@ function Plans({ plans }: { plans: PublicPlan[] }) {
       />
     );
   }
-  const purchasable = plans.some((plan) => plan.purchasable);
+  const purchasable = plans.some((plan) => plan.prices.some((price) => price.purchasable));
   return (
     <div className="flex flex-col gap-4">
       {!purchasable && (
@@ -76,11 +76,9 @@ function Plans({ plans }: { plans: PublicPlan[] }) {
       )}
       <PlanGrid>
         {plans.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            action={plan.purchasable ? <SubscribeButton planId={plan.id} planName={plan.name} /> : undefined}
-          />
+          <PlanCard key={plan.id} plan={plan}>
+            {purchasable ? <PlanCheckout plan={plan} /> : <PriceList plan={plan} />}
+          </PlanCard>
         ))}
       </PlanGrid>
     </div>
