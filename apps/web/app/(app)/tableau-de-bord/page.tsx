@@ -1,11 +1,36 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
+import { MembershipBadge } from "@/components/membership-badge";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
+import { apiGet } from "@/lib/api";
+import { formatDate, profileCompleteness } from "@/lib/format";
 import { requireUser } from "@/lib/session";
+import type { Membership } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Tableau de bord" };
+
+function LinkCard({ href, title, children }: { href: string; title: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+    >
+      <Card title={title} className="h-full transition-colors hover:border-accent/40">
+        {children}
+      </Card>
+    </Link>
+  );
+}
+
+function CardFallback({ title }: { title: string }) {
+  return (
+    <Card title={title} className="h-full" aria-busy>
+      <p className="text-sm text-muted">Chargement…</p>
+    </Card>
+  );
+}
 
 async function Greeting() {
   const user = await requireUser();
@@ -17,11 +42,59 @@ async function Greeting() {
   );
 }
 
-const nextSteps = [
-  { href: "/profil", title: "Compléter mon profil", text: "Coordonnées et informations pour la licence FFK." },
-  { href: "/abonnement", title: "Choisir ma formule", text: "Adhérez au dojo et réglez votre cotisation." },
-  { href: "/documents", title: "Déposer mon certificat médical", text: "Indispensable pour pratiquer." },
-];
+async function MembershipSummary() {
+  await requireUser();
+  const membership = await apiGet<Membership>("/billing/subscription");
+  return (
+    <LinkCard href="/abonnement" title="Mon abonnement">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <MembershipBadge status={membership.status} />
+          {membership.planName && <span className="text-sm text-ink">{membership.planName}</span>}
+        </div>
+        <p className="text-sm text-muted">
+          {membership.isMember && membership.currentPeriodEnd
+            ? `${membership.cancelAtPeriodEnd ? "Se termine le" : "Renouvellement le"} ${formatDate(membership.currentPeriodEnd)}.`
+            : membership.isMember
+              ? "Votre adhésion est à jour."
+              : "Adhérez au dojo et réglez votre cotisation en ligne."}
+        </p>
+        {(membership.status === "past_due" || membership.status === "unpaid") && (
+          <p className="text-sm text-danger">
+            Votre dernier paiement n&apos;a pas abouti. Mettez à jour votre moyen de paiement.
+          </p>
+        )}
+      </div>
+    </LinkCard>
+  );
+}
+
+async function ProfileSummary() {
+  const user = await requireUser();
+  const { filled, total } = profileCompleteness(user);
+  const complete = filled === total;
+  return (
+    <LinkCard href="/profil" title="Mon profil">
+      <div className="flex flex-col gap-2">
+        <div
+          role="progressbar"
+          aria-label="Profil complété"
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-valuenow={filled}
+          className="h-2 overflow-hidden rounded-full bg-ink/5"
+        >
+          <div className="h-full rounded-full bg-accent" style={{ width: `${Math.round((filled / total) * 100)}%` }} />
+        </div>
+        <p className="text-sm text-muted">
+          {complete
+            ? "Votre profil est complet."
+            : `${filled} informations sur ${total} renseignées. Complétez votre profil pour votre licence FFK.`}
+        </p>
+      </div>
+    </LinkCard>
+  );
+}
 
 export default function DashboardPage() {
   return (
@@ -30,17 +103,15 @@ export default function DashboardPage() {
         <Greeting />
       </Suspense>
       <div className="grid gap-4 md:grid-cols-3">
-        {nextSteps.map((step) => (
-          <Link
-            key={step.href}
-            href={step.href}
-            className="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            <Card title={step.title} className="h-full transition-colors hover:border-accent/40">
-              <p className="text-sm text-muted">{step.text}</p>
-            </Card>
-          </Link>
-        ))}
+        <Suspense fallback={<CardFallback title="Mon abonnement" />}>
+          <MembershipSummary />
+        </Suspense>
+        <Suspense fallback={<CardFallback title="Mon profil" />}>
+          <ProfileSummary />
+        </Suspense>
+        <LinkCard href="/documents" title="Déposer mon certificat médical">
+          <p className="text-sm text-muted">Indispensable pour pratiquer.</p>
+        </LinkCard>
       </div>
     </div>
   );
