@@ -5,6 +5,7 @@
 - `GET /me`, `PATCH /me`: identity (first name, last name, phone, photo) and FFK licence information (birth date, sex, nationality, address, emergency contact). Email change and password change are separate routes, both asking for the current password.
 - The photo is uploaded through the storage service (`documents.md`), images only (JPEG, PNG, WebP), 5 MB max, served through `/members/:id/photo`.
 - `directory_visible` is toggled here by the member only.
+- Photos are cached `private, max-age=300`: after leaving the directory, a photo can stay visible in another member's browser for up to five minutes. Accepted limit.
 
 ## Directory ("Annuaire")
 

@@ -8,6 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { AppThrottlerGuard } from './common/throttler.guard';
 import { RolesGuard, SessionGuard } from './auth/guards';
 import { PrismaModule } from './prisma/prisma.module';
+import { StorageModule } from './storage/storage.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -17,7 +19,9 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     PrismaModule,
+    StorageModule,
     AuthModule,
+    UsersModule,
   ],
   controllers: [AppController],
   // Order matters: SessionGuard sets req.user, RolesGuard reads it.
