@@ -101,6 +101,63 @@ async function main() {
       });
     }
 
+    /*
+     * Demo billing states. The sub_demo_ ids do not exist at Stripe: erasing
+     * these members needs a configured Stripe key, which answers
+     * resource_missing, treated as already cancelled.
+     */
+    const [, , camille, hugo, sakura] = users;
+    const annual = await prisma.plan.findFirst({
+      where: { name: PLANS[0].name },
+    });
+    const monthly = await prisma.plan.findFirst({
+      where: { name: PLANS[1].name },
+    });
+    const yearAhead = new Date(Date.now() + 300 * 24 * 3600 * 1000);
+    const lastWeek = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+    const states = [
+      { user: camille, plan: annual, status: 'active', end: yearAhead },
+      { user: sakura, plan: annual, status: 'active', end: yearAhead },
+      { user: hugo, plan: monthly, status: 'past_due', end: lastWeek },
+    ];
+    for (const { user, plan, status, end } of states) {
+      const stripeSubscriptionId = `sub_demo_${user.id.slice(0, 8)}`;
+      await prisma.subscription.upsert({
+        where: { stripeSubscriptionId },
+        update: {},
+        create: {
+          userId: user.id,
+          planId: plan?.id ?? null,
+          stripeSubscriptionId,
+          status,
+          currentPeriodEnd: end,
+        },
+      });
+      await prisma.payment.upsert({
+        where: { stripeInvoiceId: `in_demo_${user.id.slice(0, 8)}` },
+        update: {},
+        create: {
+          userId: user.id,
+          stripeInvoiceId: `in_demo_${user.id.slice(0, 8)}`,
+          amountCents: plan?.amountCents ?? 0,
+          status: status === 'active' ? 'PAID' : 'FAILED',
+          paidAt: status === 'active' ? lastWeek : null,
+        },
+      });
+    }
+
+    for (const user of [camille, sakura]) {
+      await prisma.license.upsert({
+        where: { userId_season: { userId: user.id, season: '2026-2027' } },
+        update: {},
+        create: {
+          userId: user.id,
+          season: '2026-2027',
+          number: `DEMO-2026-0${users.indexOf(user)}`,
+        },
+      });
+    }
+
     console.log(
       `Seeded ${users.length} members and ${PLANS.length} plans (password: ${DEMO_PASSWORD})`,
     );

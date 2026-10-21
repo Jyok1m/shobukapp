@@ -11,6 +11,7 @@ import { AppThrottlerGuard } from './common/throttler.guard';
 import { RolesGuard, SessionGuard } from './auth/guards';
 import { DocumentsModule } from './documents/documents.module';
 import { MailModule } from './mail/mail.module';
+import { MessagesModule } from './messages/messages.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
@@ -30,6 +31,7 @@ import { UsersModule } from './users/users.module';
     BillingModule,
     AdminMembersModule,
     DocumentsModule,
+    MessagesModule,
   ],
   controllers: [AppController],
   // Order matters: SessionGuard sets req.user, RolesGuard reads it.
