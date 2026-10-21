@@ -12,6 +12,7 @@ import { cx } from "@/lib/cx";
 import { certificateState } from "@/lib/documents";
 import { cotisationLabel, formatAmount, formatShortDate } from "@/lib/format";
 import type { AdminMembersPage } from "@/lib/types";
+import { FederationBadges } from "./federation-badges";
 import { fullName, type MemberQuery } from "./query";
 import { ReminderDialog, reminderMessage, type ReminderTarget } from "./reminder-dialog";
 import { useMemberPages } from "./use-member-pages";
@@ -55,6 +56,7 @@ export function PayersTable({ initial, query }: { initial: AdminMembersPage; que
             <Th>Échecs</Th>
             <Th>Dernière relance</Th>
             <Th>Certificat médical</Th>
+            <Th>Licence et passeport</Th>
             <Th>
               <span className="sr-only">Actions</span>
             </Th>
@@ -104,6 +106,9 @@ export function PayersTable({ initial, query }: { initial: AdminMembersPage; que
                   {member.lastReminderAt ? formatShortDate(member.lastReminderAt) : <span className="text-muted">Jamais</span>}
                 </Td>
                 <CertificateCell certificate={member.medicalCertificate} />
+                <Td className="min-w-44">
+                  <FederationBadges federation={member.federation} />
+                </Td>
                 <Td>
                   <div className="flex justify-end">
                     <Button

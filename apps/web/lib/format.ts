@@ -1,5 +1,5 @@
 import type { BadgeTone } from "@/components/ui/badge";
-import type { Frequency, PaymentStatus, SelfUser } from "./types";
+import type { Charge, ChargeStatus, Frequency, PaymentStatus, SelfUser } from "./types";
 
 /* "250 €" for whole amounts, "15,50 €" otherwise. */
 export function formatAmount(amountCents: number, currency: string): string {
@@ -85,6 +85,20 @@ export const paymentStatuses: Record<PaymentStatus, { label: string; tone: Badge
   FAILED: { label: "Échoué", tone: "danger" },
   OPEN: { label: "En attente", tone: "accent" },
 };
+
+/* One-off charges: "Payé" says how when known (online through Stripe, or recorded by hand). */
+export const chargeStatuses: Record<ChargeStatus, { label: string; tone: BadgeTone }> = {
+  PENDING: { label: "En attente", tone: "accent" },
+  PAID: { label: "Payé", tone: "success" },
+  DECLINED: { label: "Refusé", tone: "danger" },
+  WAIVED: { label: "Offert", tone: "neutral" },
+};
+
+export function chargeStatus(charge: Pick<Charge, "status" | "method">): { label: string; tone: BadgeTone } {
+  if (charge.status === "PAID" && charge.method === "STRIPE") return { label: "Payé en ligne", tone: "success" };
+  if (charge.status === "PAID" && charge.method === "MANUAL") return { label: "Payé sur place", tone: "success" };
+  return chargeStatuses[charge.status] ?? { label: "Statut inconnu", tone: "neutral" };
+}
 
 export function initials(firstName: string, lastName: string): string {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();

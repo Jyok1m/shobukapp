@@ -53,6 +53,7 @@ function PlanEditForm({ plan, onClose, onSaved }: { plan: AdminPlan; onClose: ()
     });
     if (prices.length > 0) changes.prices = prices;
     if (values.sortOrder !== plan.sortOrder) changes.sortOrder = values.sortOrder;
+    if (values.entranceFeeCents !== plan.entranceFeeCents) changes.entranceFeeCents = values.entranceFeeCents;
 
     if (Object.keys(changes).length === 0 && synced) return onClose();
 
@@ -66,9 +67,9 @@ function PlanEditForm({ plan, onClose, onSaved }: { plan: AdminPlan; onClose: ()
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       <Notice>
-        Un nouveau montant ne s&apos;applique qu&apos;aux nouveaux paiements : il crée un nouveau prix dans Stripe, et
-        les pratiquants qui cotisent déjà conservent l&apos;ancien tarif jusqu&apos;à ce qu&apos;ils changent de
-        formule ou de fréquence.
+        Un nouveau montant crée un nouveau prix dans Stripe. Les pratiquants qui cotisent déjà à cette fréquence
+        passent au nouveau tarif à leur prochaine échéance, sans prorata, et sont prévenus par e-mail. Un nouveau
+        droit d&apos;entrée s&apos;applique à la prochaine échéance annuelle de chacun.
       </Notice>
       {!synced && (
         <Notice tone="danger">

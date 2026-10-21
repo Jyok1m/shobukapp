@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Th } from "@/components/ui/table";
 import { apiRequest } from "@/lib/client-api";
-import { formatPrices } from "@/lib/format";
+import { formatAmount, formatPrices } from "@/lib/format";
 import type { AdminPlan } from "@/lib/types";
 import { PlanEditDialog } from "./plan-edit-dialog";
 
@@ -17,6 +17,11 @@ function PricesCell({ plan }: { plan: AdminPlan }) {
   const offered = plan.prices.filter((price) => price.active);
   if (offered.length === 0) return <span className="text-muted">Aucune fréquence proposée</span>;
   return <>{formatPrices(offered, plan.currency)}</>;
+}
+
+function EntranceFeeCell({ plan }: { plan: AdminPlan }) {
+  if (plan.entranceFeeCents <= 0) return <span className="text-muted">Aucun</span>;
+  return <>{formatAmount(plan.entranceFeeCents, plan.currency)} / an</>;
 }
 
 export function PlansTable({ plans }: { plans: AdminPlan[] }) {
@@ -65,6 +70,7 @@ export function PlansTable({ plans }: { plans: AdminPlan[] }) {
           <tr>
             <Th>Formule</Th>
             <Th>Tarifs</Th>
+            <Th>Droit d&apos;entrée</Th>
             <Th>Stripe</Th>
             <Th>Statut</Th>
             <Th>
@@ -83,6 +89,9 @@ export function PlansTable({ plans }: { plans: AdminPlan[] }) {
                 </Td>
                 <Td className="min-w-48">
                   <PricesCell plan={plan} />
+                </Td>
+                <Td className="whitespace-nowrap">
+                  <EntranceFeeCell plan={plan} />
                 </Td>
                 <Td className="whitespace-nowrap">
                   <Badge tone={synced ? "success" : "danger"}>

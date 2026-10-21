@@ -31,6 +31,7 @@ export function PlanCreateForm() {
       name: values.name,
       ...(values.description && { description: values.description }),
       sortOrder: values.sortOrder,
+      entranceFeeCents: values.entranceFeeCents,
       prices: values.prices,
     });
     setPending(false);

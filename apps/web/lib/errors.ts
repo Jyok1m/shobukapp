@@ -38,6 +38,13 @@ export const apiErrorMessages: Record<string, string> = {
     "Certains soirs choisis ne sont plus disponibles. Choisissez un lundi, un mercredi ou un vendredi, entre demain et les deux prochains mois.",
   invalid_trial_slot: "Choisissez un lundi, un mercredi ou un vendredi à venir.",
   no_trial_requested: "Cette personne n'a pas demandé de cours d'essai.",
+  product_not_found: "Ce produit n'est plus disponible.",
+  product_inactive: "Ce produit est désactivé : réactivez-le dans « Produits » avant de le demander.",
+  charge_exists: "Déjà demandé ou réglé pour cette saison.",
+  charge_not_found: "Cette demande de paiement est introuvable. Elle a peut-être été supprimée.",
+  charge_not_pending: "Cette demande n'est plus en attente : le lien ne peut plus être envoyé.",
+  charge_paid_online:
+    "Payé en ligne : le statut ne peut pas être modifié ici. Un remboursement se fait depuis le tableau de bord Stripe.",
   invitation_not_found: "Cette invitation n'est plus en attente : elle a déjà été utilisée, révoquée ou a expiré.",
 };
 

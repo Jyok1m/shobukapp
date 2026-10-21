@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Suspense, cache, type ReactNode } from "react";
 import { DocumentBoardSections } from "@/components/documents/document-board";
 import { MembershipBadge } from "@/components/membership-badge";
+import { ChargeReturnNotice } from "@/components/billing/charge-return-notice";
+import { ChargeHistory, PendingCharges, ProductOffers } from "@/components/billing/member-purchases";
 import { PortalButton } from "@/components/billing/portal-button";
 import { NotCarriedNotice } from "@/components/billing/test-mode-notices";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +13,7 @@ import { Card } from "@/components/ui/card";
 import { apiGet } from "@/lib/api";
 import { cotisationLabel, formatDate, profileCompleteness } from "@/lib/format";
 import { requireUser } from "@/lib/session";
-import type { DocumentBoard, Membership } from "@/lib/types";
+import type { Charge, DocumentBoard, Membership, MemberProduct } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Tableau de bord" };
 
@@ -92,6 +94,46 @@ async function CarriedOver() {
   return membership.testCotisationNotCarried ? <NotCarriedNotice className="mb-6" /> : null;
 }
 
+async function Purchases() {
+  await requireUser();
+  const [charges, products, membership] = await Promise.all([
+    apiGet<Charge[]>("/billing/charges"),
+    apiGet<MemberProduct[]>("/billing/products"),
+    getMembership(),
+  ]);
+  const ownCheckout = new Set(products.map((product) => product.id));
+  /*
+   * A pending charge without a link on a product members buy themselves is a
+   * checkout left before paying: nothing to show, buying again opens a new one.
+   */
+  const pending = charges.filter(
+    (charge) => charge.status === "PENDING" && (charge.stripePaymentLinkUrl || !ownCheckout.has(charge.product.id)),
+  );
+  const history = charges.filter((charge) => charge.status !== "PENDING");
+  if (pending.length === 0 && products.length === 0 && history.length === 0) return null;
+
+  return (
+    <section className="flex flex-col gap-6" aria-labelledby="purchases-title">
+      <h2 id="purchases-title" className="font-serif text-xl font-semibold text-ink">
+        Licence, passeport et achats
+      </h2>
+      {pending.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h3 className="text-sm font-semibold text-ink">À régler</h3>
+          <PendingCharges charges={pending} />
+        </div>
+      )}
+      {products.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h3 className="text-sm font-semibold text-ink">Acheter</h3>
+          <ProductOffers products={products} testMode={membership.testMode} />
+        </div>
+      )}
+      <ChargeHistory charges={history} />
+    </section>
+  );
+}
+
 async function Board() {
   await requireUser();
   const board = await apiGet<DocumentBoard>("/documents/board");
@@ -132,6 +174,9 @@ export default function DashboardPage() {
         <Greeting />
       </Suspense>
       <Suspense fallback={null}>
+        <ChargeReturnNotice />
+      </Suspense>
+      <Suspense fallback={null}>
         <CarriedOver />
       </Suspense>
       <div className="grid gap-4 md:grid-cols-3">
@@ -146,6 +191,9 @@ export default function DashboardPage() {
         </LinkCard>
       </div>
       <div className="mt-10 flex flex-col gap-10">
+        <Suspense fallback={null}>
+          <Purchases />
+        </Suspense>
         <Suspense fallback={null}>
           <Board />
         </Suspense>

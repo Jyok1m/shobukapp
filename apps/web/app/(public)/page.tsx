@@ -73,7 +73,8 @@ export default function HomePage() {
           <Plans />
         </Suspense>
         <p className="text-xs text-muted">
-          En plus de la cotisation : le droit d&apos;entrée annuel et la licence-assurance FFJDA, réglés auprès du dojo.
+          En plus de la cotisation : la licence-assurance FFJDA de la saison et, la première fois, le passeport sportif,
+          demandés par le bureau.
         </p>
       </section>
 

@@ -62,6 +62,8 @@ export type PublicPlan = {
   name: string;
   description: string | null;
   currency: string;
+  /* Yearly entrance fee: charged with the first payment, then once a year. 0 when none. */
+  entranceFeeCents: number;
   prices: PublicPlanPrice[];
 };
 
@@ -79,6 +81,7 @@ export type AdminPlan = {
   name: string;
   description: string | null;
   currency: string;
+  entranceFeeCents: number;
   prices: AdminPlanPrice[];
   stripeTestProductId: string | null;
   stripeLiveProductId: string | null;
@@ -115,6 +118,8 @@ export type Membership = {
   testMode: boolean;
   /* Live mode, and the member had a cotisation paid in test mode: it does not carry over. */
   testCotisationNotCarried: boolean;
+  /* The yearly entrance fee is paid until then: none due at the next checkout. */
+  entranceFeePaidUntil: string | null;
   payments: Payment[];
 };
 
@@ -142,6 +147,8 @@ export type AdminMemberListItem = {
   lastReminderAt: string | null;
   /* Latest medical certificate, date only. */
   medicalCertificate: { validUntil: string | null } | null;
+  /* This season's FFJDA licence and the sports passport, latest charge per product. */
+  federation: { slug: string; name: string; status: ChargeStatus }[];
 };
 
 export type AdminMembersPage = {
@@ -338,3 +345,52 @@ export type LinkInvitationResult = { link: string; expiresAt: string; delivery: 
 
 /* POST /admin/invitations: the code is only ever returned here. */
 export type CodeInvitationResult = { code: string; expiresAt: string; delivery: MailDelivery };
+
+/* One-off products (docs/billing.md, One-off products). */
+export type ProductKind = "FEDERATION" | "MISC";
+
+/* GET /admin/products */
+export type AdminProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  kind: ProductKind;
+  amountCents: number;
+  currency: string;
+  memberPurchasable: boolean;
+  /* Due once per season (licence), not once for good. */
+  perSeason: boolean;
+  active: boolean;
+};
+
+/* GET /billing/products: what a member may buy alone. */
+export type MemberProduct = {
+  id: string;
+  name: string;
+  description: string | null;
+  amountCents: number;
+  currency: string;
+  purchasable: boolean;
+};
+
+export type ChargeStatus = "PENDING" | "PAID" | "DECLINED" | "WAIVED";
+export type ChargeMethod = "STRIPE" | "MANUAL";
+
+/* GET /admin/members/:id/charges and GET /billing/charges (the member sees a link only while pending). */
+export type Charge = {
+  id: string;
+  amountCents: number;
+  currency: string;
+  status: ChargeStatus;
+  method: ChargeMethod | null;
+  season: string | null;
+  note: string | null;
+  stripePaymentLinkUrl: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  product: { id: string; slug: string; name: string; kind: ProductKind };
+};
+
+/* POST /admin/members/:id/charges with sendLink, and POST /admin/charges/:id/link. */
+export type ChargeWithDelivery = Charge & { delivery?: MailDelivery };

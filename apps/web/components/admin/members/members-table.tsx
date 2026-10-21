@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Th } from "@/components/ui/table";
 import { formatShortDate } from "@/lib/format";
 import type { AdminMembersPage } from "@/lib/types";
+import { FederationBadges } from "./federation-badges";
 import { fullName, type MemberQuery } from "./query";
 import { useMemberPages } from "./use-member-pages";
 
@@ -35,6 +36,7 @@ export function MembersTable({ initial, query }: { initial: AdminMembersPage; qu
             <Th>Adresse e-mail</Th>
             <Th>Téléphone</Th>
             <Th>Inscription</Th>
+            <Th>Licence et passeport</Th>
             <Th>
               <span className="sr-only">Actions</span>
             </Th>
@@ -60,6 +62,9 @@ export function MembersTable({ initial, query }: { initial: AdminMembersPage; qu
                 </Td>
                 <Td className="whitespace-nowrap">{member.phone ?? <span className="text-muted">Non renseigné</span>}</Td>
                 <Td className="whitespace-nowrap">{formatShortDate(member.createdAt)}</Td>
+                <Td className="min-w-44">
+                  <FederationBadges federation={member.federation} />
+                </Td>
                 <Td>
                   <div className="flex justify-end">
                     <Link

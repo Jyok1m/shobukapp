@@ -11,7 +11,14 @@ export function NotCarriedNotice({ className }: { className?: string }) {
 }
 
 /* Before any pay button in test mode: short line first, details right after. */
-export function DemoPaymentNotice({ className }: { className?: string }) {
+export function DemoPaymentNotice({
+  className,
+  subject = "cotisation",
+}: {
+  className?: string;
+  /* "achat": one-off products (licence, private lessons...), nothing carries over either. */
+  subject?: "cotisation" | "achat";
+}) {
   return (
     <Notice tone="warning" className={className}>
       <p className="font-semibold">Mode démonstration : aucune somme n&apos;est débitée.</p>
@@ -20,8 +27,9 @@ export function DemoPaymentNotice({ className }: { className?: string }) {
         d&apos;expiration future et n&apos;importe quel code.
       </p>
       <p className="mt-1">
-        Cette cotisation de démonstration ne sera pas reprise quand le dojo passera aux paiements réels : il faudra
-        alors la régler à nouveau.
+        {subject === "cotisation"
+          ? "Cette cotisation de démonstration ne sera pas reprise quand le dojo passera aux paiements réels : il faudra alors la régler à nouveau."
+          : "Ces achats de démonstration ne seront pas repris quand le dojo passera aux paiements réels."}
       </p>
     </Notice>
   );

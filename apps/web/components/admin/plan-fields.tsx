@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FREQUENCIES, frequencyNames, frequencyUnits } from "@/lib/format";
 import type { AdminPlan, Frequency } from "@/lib/types";
 
-export type PlanFieldErrors = Partial<Record<"name" | "sortOrder" | "prices" | `amount-${Frequency}`, string>>;
+export type PlanFieldErrors = Partial<Record<"name" | "sortOrder" | "entranceFee" | "prices" | `amount-${Frequency}`, string>>;
 
 export type PriceValue = { frequency: Frequency; amountCents: number; active: boolean };
 
@@ -12,12 +12,14 @@ export type PlanValues = {
   name: string;
   description: string;
   sortOrder: number;
+  entranceFeeCents: number;
   /* Only the rows worth sending: offered ones, plus unchecked ones that exist or carry an amount. */
   prices: PriceValue[];
 };
 
 const MIN_CENTS = 100;
 const MAX_CENTS = 1_000_000;
+const MAX_ENTRANCE_FEE_CENTS = 100_000;
 
 function centsToInput(cents: number): string {
   return (cents / 100).toFixed(2).replace(".", ",");
@@ -33,6 +35,13 @@ export function readPlanForm(data: FormData, plan?: AdminPlan): { values: PlanVa
   const errors: PlanFieldErrors = {};
   if (!name) errors.name = "Indiquez le nom de la formule.";
   if (!Number.isInteger(sortOrder) || sortOrder < 0) errors.sortOrder = "Indiquez un nombre entier positif.";
+
+  // Empty means no entrance fee.
+  const rawFee = String(data.get("entranceFee") ?? "").trim().replace(/\s/g, "").replace(",", ".");
+  const feeValid = rawFee === "" || /^\d+(\.\d{1,2})?$/.test(rawFee);
+  const entranceFeeCents = feeValid && rawFee !== "" ? Math.round(Number(rawFee) * 100) : 0;
+  if (!feeValid) errors.entranceFee = "Indiquez un montant en euros, par exemple 60 ou 45,50.";
+  else if (entranceFeeCents > MAX_ENTRANCE_FEE_CENTS) errors.entranceFee = "Le droit d'entrée maximum est de 1 000 €.";
 
   const prices: PriceValue[] = [];
   for (const frequency of FREQUENCIES) {
@@ -55,7 +64,7 @@ export function readPlanForm(data: FormData, plan?: AdminPlan): { values: PlanVa
   }
   if (!prices.some((price) => price.active)) errors.prices = "Proposez au moins une fréquence de paiement.";
 
-  return { values: { name, description, sortOrder, prices }, errors };
+  return { values: { name, description, sortOrder, entranceFeeCents, prices }, errors };
 }
 
 function PriceRow({
@@ -169,6 +178,28 @@ export function PlanFields({
           </p>
         )}
       </fieldset>
+      <Field
+        id={id("entranceFee")}
+        label="Droit d'entrée annuel (€)"
+        hint="Facultatif. Réglé avec le premier paiement, puis une fois par an. Laissez vide ou 0 s'il n'y en a pas."
+        error={errors.entranceFee}
+      >
+        {(control) => (
+          <div className="relative">
+            <Input
+              {...control}
+              name="entranceFee"
+              inputMode="decimal"
+              defaultValue={plan && plan.entranceFeeCents > 0 ? centsToInput(plan.entranceFeeCents) : ""}
+              placeholder="0,00"
+              className="pr-8 text-right"
+            />
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted">
+              €
+            </span>
+          </div>
+        )}
+      </Field>
       <Field
         id={id("sortOrder")}
         label="Ordre d'affichage"

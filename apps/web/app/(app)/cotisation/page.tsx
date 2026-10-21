@@ -41,6 +41,12 @@ function MembershipCard({ membership, plan }: { membership: Membership; plan: Pu
               <span className="font-medium text-ink">{formatDate(currentPeriodEnd)}</span>
             </p>
           )}
+          {membership.entranceFeePaidUntil && (
+            <p className="text-sm text-muted">
+              Droit d&apos;entrée réglé jusqu&apos;au{" "}
+              <span className="font-medium text-ink">{formatDate(membership.entranceFeePaidUntil)}</span>
+            </p>
+          )}
           {membership.testMode && isMember && (
             <p className="text-sm text-warning">
               Cotisation de démonstration : elle ne sera pas reprise quand le dojo passera aux paiements réels.
@@ -74,7 +80,7 @@ function MembershipCard({ membership, plan }: { membership: Membership; plan: Pu
   );
 }
 
-function Plans({ plans }: { plans: PublicPlan[] }) {
+function Plans({ plans, entranceFeePaidUntil }: { plans: PublicPlan[]; entranceFeePaidUntil: string | null }) {
   if (plans.length === 0) {
     return (
       <EmptyState
@@ -91,7 +97,7 @@ function Plans({ plans }: { plans: PublicPlan[] }) {
       )}
       <PlanGrid>
         {plans.map((plan) => (
-          <PlanCard key={plan.id} plan={plan}>
+          <PlanCard key={plan.id} plan={plan} entranceFeePaidUntil={entranceFeePaidUntil}>
             {purchasable ? <PlanCheckout plan={plan} /> : <PriceList plan={plan} />}
           </PlanCard>
         ))}
@@ -119,7 +125,7 @@ async function Subscription() {
             Nos formules
           </h2>
           {membership.testMode && <DemoPaymentNotice />}
-          <Plans plans={plans} />
+          <Plans plans={plans} entranceFeePaidUntil={membership.entranceFeePaidUntil} />
         </section>
       )}
       <section className="flex flex-col gap-4" aria-labelledby="payments-title">

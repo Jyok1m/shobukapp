@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
+import { MemberCharges } from "@/components/admin/members/member-charges";
 import { DeleteMemberZone } from "@/components/admin/members/delete-member-zone";
 import { MemberLicences } from "@/components/admin/members/member-licences";
 import { MemberRole } from "@/components/admin/members/member-role";
@@ -18,7 +19,7 @@ import { Notice } from "@/components/ui/notice";
 import { apiFetch, apiGet } from "@/lib/api";
 import { cotisationLabel, formatDate } from "@/lib/format";
 import { requireUser } from "@/lib/session";
-import type { AdminMemberDetail, License, MemberDocument } from "@/lib/types";
+import type { AdminMemberDetail, AdminProduct, Charge, License, MemberDocument } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Fiche membre" };
 
@@ -58,9 +59,11 @@ async function MemberDetail({ params, searchParams }: { params: Promise<{ id: st
   const admin = await requireUser("ADMIN");
   const { id } = await params;
   const member = await loadMember(id);
-  const [documents, licenses] = await Promise.all([
+  const [documents, licenses, charges, products] = await Promise.all([
     apiGet<MemberDocument[]>(`/admin/documents/members/${member.id}`),
     apiGet<License[]>(`/admin/licenses?userId=${member.id}`),
+    apiGet<Charge[]>(`/admin/members/${member.id}/charges`),
+    apiGet<AdminProduct[]>("/admin/products"),
   ]);
   const name = fullName(member);
   const createdRaw = (await searchParams).cree;
@@ -128,6 +131,10 @@ async function MemberDetail({ params, searchParams }: { params: Promise<{ id: st
           emptyDescription="Ce membre n'a encore déposé aucun document, ni certificat médical."
         />
       </Section>
+
+      <div className="max-w-3xl">
+        <MemberCharges memberId={member.id} charges={charges} products={products} />
+      </div>
 
       <div className="max-w-3xl">
         <MemberLicences memberId={member.id} licenses={licenses} />
