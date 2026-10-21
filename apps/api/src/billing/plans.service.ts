@@ -110,7 +110,12 @@ export class PlansService {
       orderBy: [{ active: 'desc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
       include: withPrices,
     });
-    return plans.map((plan) => ({
+    return plans.map((plan) => this.toAdmin(plan, mode));
+  }
+
+  // The same shape on every admin route, so a form can trust `synced`.
+  private toAdmin(plan: PlanWithPrices, mode: StripeMode): AdminPlan {
+    return {
       ...plan,
       prices: sortPrices(plan.prices),
       synced:
@@ -118,10 +123,10 @@ export class PlansService {
         plan.prices
           .filter((p) => p.active)
           .every((p) => Boolean(p[MODE_FIELDS[mode].price])),
-    }));
+    };
   }
 
-  async create(dto: CreatePlanDto): Promise<PlanWithPrices> {
+  async create(dto: CreatePlanDto): Promise<AdminPlan> {
     const prices = this.validatePrices(dto.prices, true);
     const id = randomUUID();
     const draft: PlanWithPrices = {
@@ -141,7 +146,7 @@ export class PlansService {
     const synced = client
       ? await this.syncPlan(client, mode, draft, draft)
       : draft;
-    return this.prisma.plan.create({
+    const created = await this.prisma.plan.create({
       data: {
         id,
         name: synced.name,
@@ -161,20 +166,21 @@ export class PlansService {
       },
       include: withPrices,
     });
+    return this.toAdmin(created, mode);
   }
 
-  async update(id: string, dto: UpdatePlanDto): Promise<PlanWithPrices> {
+  async update(id: string, dto: UpdatePlanDto): Promise<AdminPlan> {
     const current = await this.find(id);
     const next = this.applyUpdate(current, dto);
     const { mode, client } = await this.stripe.current();
     const synced = client
       ? await this.syncPlan(client, mode, current, next)
       : next;
-    return this.save(synced);
+    return this.toAdmin(await this.save(synced), mode);
   }
 
   // Archive, never delete: a plan someone still pays cannot disappear.
-  archive(id: string): Promise<PlanWithPrices> {
+  archive(id: string): Promise<AdminPlan> {
     return this.update(id, { active: false });
   }
 

@@ -125,9 +125,13 @@ export class SubscriptionsService {
       frequency: subscription?.frequency ?? null,
       currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
       cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
-      // The portal opens as soon as a billing account exists, so a former
-      // subscriber can still read their invoices.
-      manageable: Boolean(client && user[MODE_FIELDS[mode].customer]),
+      // Open to a former member too, to read their invoices; not to someone
+      // who only abandoned a checkout and has nothing to manage.
+      manageable: Boolean(
+        client &&
+        user[MODE_FIELDS[mode].customer] &&
+        (subscriptions.length > 0 || payments.length > 0),
+      ),
       testMode: mode === 'test',
       payments,
     };
