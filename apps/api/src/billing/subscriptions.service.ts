@@ -9,6 +9,8 @@ import { createHash } from 'node:crypto';
 import type Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
 import type { SelfUser } from '../common/self-user';
+import type { PlanInterval } from '../generated/prisma/enums';
+import { frequencyOf } from './plans.service';
 import { MODE_FIELDS, StripeMode, StripeService } from './stripe.service';
 
 export const ACTIVE_STATUSES = ['active', 'trialing'];
@@ -44,6 +46,7 @@ export type MembershipView = {
   status: string | null;
   isMember: boolean;
   planName: string | null;
+  frequency: PlanInterval | null;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
   manageable: boolean;
@@ -119,6 +122,7 @@ export class SubscriptionsService {
       status: subscription?.status ?? null,
       isMember: MEMBER_STATUSES.includes(subscription?.status ?? ''),
       planName: subscription?.plan?.name ?? null,
+      frequency: subscription?.frequency ?? null,
       currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
       cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
       // The portal opens as soon as a billing account exists, so a former
@@ -129,13 +133,21 @@ export class SubscriptionsService {
     };
   }
 
-  async checkout(user: SelfUser, planId: string): Promise<{ url: string }> {
+  async checkout(
+    user: SelfUser,
+    planId: string,
+    frequency: PlanInterval,
+  ): Promise<{ url: string }> {
     const { mode, client: stripe } = await this.stripe.requireCurrent();
-    const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
-    const priceId = plan?.[MODE_FIELDS[mode].price];
-    if (!plan || !plan.active || !priceId) {
+    const price = await this.prisma.planPrice.findUnique({
+      where: { planId_frequency: { planId, frequency } },
+      include: { plan: { select: { id: true, active: true } } },
+    });
+    const priceId = price?.[MODE_FIELDS[mode].price];
+    if (!price || !price.active || !price.plan.active || !priceId) {
       throw new NotFoundException({ code: 'plan_not_found' });
     }
+    const plan = price.plan;
     const current = await this.prisma.subscription.findFirst({
       where: {
         userId: user.id,
@@ -162,8 +174,10 @@ export class SubscriptionsService {
       customer,
       client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],
-      metadata: { userId: user.id, planId: plan.id },
-      subscription_data: { metadata: { userId: user.id, planId: plan.id } },
+      metadata: { userId: user.id, planId: plan.id, frequency },
+      subscription_data: {
+        metadata: { userId: user.id, planId: plan.id, frequency },
+      },
       success_url: `${this.webUrl}/cotisation?paiement=succes`,
       cancel_url: `${this.webUrl}/cotisation?paiement=annule`,
       locale: 'fr',
@@ -229,6 +243,7 @@ export class SubscriptionsService {
     const data = {
       userId,
       planId: plan?.id ?? null,
+      frequency: item ? frequencyOf(item.price.recurring) : null,
       status: subscription.status,
       currentPeriodEnd: item?.current_period_end
         ? new Date(item.current_period_end * 1000)

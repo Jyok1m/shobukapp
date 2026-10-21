@@ -36,13 +36,22 @@ describe('Billing (e2e)', () => {
     await app.close();
   });
 
+  it('rejects a checkout without a valid frequency', async () => {
+    const { cookie } = await registerUser(app);
+    await request(app.getHttpServer())
+      .post('/billing/checkout')
+      .set('Cookie', cookie)
+      .send({ planId: randomUUID(), frequency: 'WEEK' })
+      .expect(400);
+  });
+
   it('serves the plans publicly, without Stripe identifiers', async () => {
     const res = await request(app.getHttpServer())
       .get('/billing/plans')
       .expect(200);
     for (const plan of res.body as Record<string, unknown>[]) {
       expect(JSON.stringify(plan)).not.toMatch(/stripe/i);
-      expect(plan).toHaveProperty('purchasable');
+      expect(plan).toHaveProperty('prices.0.purchasable');
     }
   });
 
@@ -77,12 +86,37 @@ describe('Billing (e2e)', () => {
     await request(server)
       .post('/admin/plans')
       .set('Cookie', admin.cookie)
-      .send({ name: 'Trop bas', amountCents: 10, interval: 'YEAR' })
+      .send({
+        name: 'Trop bas',
+        prices: [{ frequency: 'YEAR', amountCents: 10, active: true }],
+      })
       .expect(400);
     await request(server)
       .post('/admin/plans')
       .set('Cookie', admin.cookie)
-      .send({ name: 'Intervalle', amountCents: 1000, interval: 'WEEK' })
+      .send({
+        name: 'Intervalle',
+        prices: [{ frequency: 'WEEK', amountCents: 1000, active: true }],
+      })
+      .expect(400);
+    await request(server)
+      .post('/admin/plans')
+      .set('Cookie', admin.cookie)
+      .send({
+        name: 'Doublon',
+        prices: [
+          { frequency: 'YEAR', amountCents: 1000, active: true },
+          { frequency: 'YEAR', amountCents: 2000, active: true },
+        ],
+      })
+      .expect(400);
+    await request(server)
+      .post('/admin/plans')
+      .set('Cookie', admin.cookie)
+      .send({
+        name: 'Rien de propose',
+        prices: [{ frequency: 'MONTH', amountCents: 1000, active: false }],
+      })
       .expect(400);
     await request(server)
       .patch(`/admin/plans/${randomUUID()}`)

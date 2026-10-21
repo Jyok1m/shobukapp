@@ -23,6 +23,7 @@ export const MODE_FIELDS = {
     price: 'stripeLivePriceId',
     customer: 'stripeLiveCustomerId',
   },
+  // product: on plans; price: on plan_prices; customer: on users.
 } as const;
 
 /*

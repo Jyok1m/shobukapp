@@ -43,6 +43,7 @@ const listSelect = (livemode: boolean) =>
       where: { livemode },
       select: {
         status: true,
+        frequency: true,
         createdAt: true,
         currentPeriodEnd: true,
         cancelAtPeriodEnd: true,
@@ -117,6 +118,7 @@ function toListItem(row: ListRow) {
       status: subscription?.status ?? null,
       isMember: MEMBER_STATUSES.includes(subscription?.status ?? ''),
       planName: subscription?.plan?.name ?? null,
+      frequency: subscription?.frequency ?? null,
       currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
       cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
     },
@@ -203,6 +205,7 @@ export class AdminMembersService {
           orderBy: { updatedAt: 'desc' },
           select: {
             status: true,
+            frequency: true,
             currentPeriodEnd: true,
             cancelAtPeriodEnd: true,
             createdAt: true,
@@ -242,6 +245,7 @@ export class AdminMembersService {
         status: current?.status ?? null,
         isMember: MEMBER_STATUSES.includes(current?.status ?? ''),
         planName: current?.plan?.name ?? null,
+        frequency: current?.frequency ?? null,
         currentPeriodEnd: current?.currentPeriodEnd ?? null,
         cancelAtPeriodEnd: current?.cancelAtPeriodEnd ?? false,
       },

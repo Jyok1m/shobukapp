@@ -45,8 +45,10 @@ users            id, email (unique, lowercased), password_hash, role (PRACTITION
                  emergency_contact_name, emergency_contact_phone,
                  directory_visible (default false), stripe_customer_id (unique, nullable)
 sessions         id, user_id, token_hash (unique), expires_at, created_at
-plans            id, name, description, amount_cents, currency, interval (MONTH|YEAR),
-                 stripe_product_id, stripe_price_id, active, sort_order
+plans            id, name, description, currency, stripe_test_product_id, stripe_live_product_id,
+                 active, sort_order
+plan_prices      id, plan_id, frequency (YEAR|QUARTER|MONTH), amount_cents, active,
+                 stripe_test_price_id, stripe_live_price_id, unique (plan_id, frequency)
 subscriptions    id, user_id, plan_id, stripe_subscription_id (unique), status,
                  current_period_end, cancel_at_period_end
 payments         id, user_id, stripe_invoice_id (unique), amount_cents, status (PAID|FAILED|OPEN), paid_at

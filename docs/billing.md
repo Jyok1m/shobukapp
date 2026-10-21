@@ -2,9 +2,20 @@
 
 Stripe holds prices, cards, invoices and retries. The database holds a mirror good enough to list, filter and decide access.
 
+## Frequencies
+
+A cotisation (a plan, "Adulte", "Étudiant") can be paid **yearly, quarterly or monthly**. Each frequency it offers is a row of `plan_prices` with its own amount, chosen freely by the admin (a discount on the yearly one is just a lower amount), and its own Stripe price per mode. The member picks the cotisation, then the frequency, at checkout (`POST /billing/checkout {planId, frequency}`).
+
+- Stripe has no quarterly interval: `QUARTER` is a price with `recurring: {interval: 'month', interval_count: 3}`. `frequencyOf()` reads a Stripe price back into a frequency.
+- One Stripe product per plan and mode, one price per frequency under it.
+- A plan must offer at least one frequency (`no_frequency_offered`); a frequency appears once per plan (`duplicate_frequency`). `PATCH /admin/plans/:id {prices: [...]}` creates or updates the listed frequencies and leaves the others untouched.
+- A frequency whose amount changes gets a new Stripe price, the old one deactivated. Changed while not offered, its price is dropped and recreated when offered again: an old amount must never come back.
+- `subscriptions.frequency` is copied from the Stripe price at each sync. Changing frequency later goes through the Customer Portal if the dojo enables plan switching there; otherwise cancel and pay again.
+- Migration `plan_frequencies` turned each existing plan into one price row at its former interval, Stripe ids included.
+
 ## Plans (admin CRUD)
 
-- A plan row maps to one Stripe product and one active Stripe price.
+- A plan row maps to one Stripe product per mode, and each of its frequencies to one active Stripe price (see Frequencies).
 - Create: Stripe product, then Stripe price, then the row. Stripe first: an orphan product is harmless and visible in the Stripe dashboard, a row pointing to a nonexistent price breaks a payment. Calls carry an idempotency key.
 - **A Stripe price is immutable.** Changing the amount or interval creates a new price, points the plan to it and deactivates the old one. Current subscribers keep the old price until they change plan: Stripe does not migrate existing subscriptions.
 - Changing name or description updates the product.

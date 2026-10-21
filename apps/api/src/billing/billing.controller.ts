@@ -16,7 +16,6 @@ import {
 import type { RawBodyRequest } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
-import type { Plan } from '../generated/prisma/client';
 import { CurrentUser, Public, Roles } from '../auth/decorators';
 import type { SelfUser } from '../common/self-user';
 import {
@@ -58,7 +57,7 @@ export class BillingController {
     @CurrentUser() user: SelfUser,
     @Body() dto: CheckoutDto,
   ): Promise<{ url: string }> {
-    return this.subscriptions.checkout(user, dto.planId);
+    return this.subscriptions.checkout(user, dto.planId, dto.frequency);
   }
 
   @Post('portal')
@@ -91,20 +90,17 @@ export class AdminPlansController {
   }
 
   @Post()
-  create(@Body() dto: CreatePlanDto): Promise<Plan> {
+  create(@Body() dto: CreatePlanDto) {
     return this.plans.create(dto);
   }
 
   @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdatePlanDto,
-  ): Promise<Plan> {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePlanDto) {
     return this.plans.update(id, dto);
   }
 
   @Delete(':id')
-  archive(@Param('id', ParseUUIDPipe) id: string): Promise<Plan> {
+  archive(@Param('id', ParseUUIDPipe) id: string) {
     return this.plans.archive(id);
   }
 }

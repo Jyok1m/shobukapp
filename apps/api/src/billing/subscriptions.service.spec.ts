@@ -51,7 +51,11 @@ const stripeSubscription = (product: string) => ({
     data: [
       {
         current_period_end: 1_800_000_000,
-        price: { id: 'price_old', product },
+        price: {
+          id: 'price_old',
+          product,
+          recurring: { interval: 'month', interval_count: 3 },
+        },
       },
     ],
   },
@@ -71,6 +75,7 @@ describe('SubscriptionsService.syncFromStripe', () => {
       expect.objectContaining({
         update: expect.objectContaining({
           planId: 'plan-1',
+          frequency: 'QUARTER',
           status: 'active',
           currentPeriodEnd: new Date(1_800_000_000 * 1000),
         }) as unknown,

@@ -22,8 +22,10 @@ enum Sex {
   MALE
 }
 
+// How often a cotisation is paid. QUARTER is a Stripe price every 3 months.
 enum PlanInterval {
   MONTH
+  QUARTER
   YEAR
 }
 
@@ -124,37 +126,54 @@ model Session {
 }
 
 model Plan {
-  id                  String       @id @default(uuid()) @db.Uuid
+  id                  String   @id @default(uuid()) @db.Uuid
   name                String
   description         String?
-  amountCents         Int          @map("amount_cents")
-  currency            String       @default("eur")
-  interval            PlanInterval
-  stripeTestProductId String?      @unique @map("stripe_test_product_id")
-  stripeTestPriceId   String?      @unique @map("stripe_test_price_id")
-  stripeLiveProductId String?      @unique @map("stripe_live_product_id")
-  stripeLivePriceId   String?      @unique @map("stripe_live_price_id")
-  active              Boolean      @default(true)
-  sortOrder           Int          @default(0) @map("sort_order")
-  createdAt           DateTime     @default(now()) @map("created_at")
-  updatedAt           DateTime     @updatedAt @map("updated_at")
+  currency            String   @default("eur")
+  // One Stripe product per mode; each frequency is a price under it.
+  stripeTestProductId String?  @unique @map("stripe_test_product_id")
+  stripeLiveProductId String?  @unique @map("stripe_live_product_id")
+  active              Boolean  @default(true)
+  sortOrder           Int      @default(0) @map("sort_order")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   subscriptions Subscription[]
+  prices        PlanPrice[]
 
   @@map("plans")
 }
 
+// One row per frequency a cotisation offers (docs/billing.md, Frequencies).
+model PlanPrice {
+  id                String       @id @default(uuid()) @db.Uuid
+  planId            String       @map("plan_id") @db.Uuid
+  frequency         PlanInterval
+  amountCents       Int          @map("amount_cents")
+  active            Boolean      @default(true)
+  stripeTestPriceId String?      @unique @map("stripe_test_price_id")
+  stripeLivePriceId String?      @unique @map("stripe_live_price_id")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, frequency])
+  @@map("plan_prices")
+}
+
 model Subscription {
-  id                   String    @id @default(uuid()) @db.Uuid
-  userId               String    @map("user_id") @db.Uuid
-  planId               String?   @map("plan_id") @db.Uuid
-  stripeSubscriptionId String    @unique @map("stripe_subscription_id")
+  id                   String        @id @default(uuid()) @db.Uuid
+  userId               String        @map("user_id") @db.Uuid
+  planId               String?       @map("plan_id") @db.Uuid
+  stripeSubscriptionId String        @unique @map("stripe_subscription_id")
   status               String
-  currentPeriodEnd     DateTime? @map("current_period_end")
-  cancelAtPeriodEnd    Boolean   @default(false) @map("cancel_at_period_end")
-  livemode             Boolean   @default(false)
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
+  currentPeriodEnd     DateTime?     @map("current_period_end")
+  cancelAtPeriodEnd    Boolean       @default(false) @map("cancel_at_period_end")
+  frequency            PlanInterval?
+  livemode             Boolean       @default(false)
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
 
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan Plan? @relation(fields: [planId], references: [id], onDelete: SetNull)

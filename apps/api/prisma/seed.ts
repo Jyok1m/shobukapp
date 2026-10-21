@@ -45,18 +45,23 @@ const MEMBERS = [
 
 const PLANS = [
   {
-    name: 'Cotisation annuelle adulte',
+    name: 'Adulte',
     description: 'Accès à tous les cours adultes pour la saison.',
-    amountCents: 25000,
-    interval: 'YEAR' as const,
     sortOrder: 0,
+    prices: [
+      { frequency: 'YEAR' as const, amountCents: 25000 },
+      { frequency: 'QUARTER' as const, amountCents: 7000 },
+      { frequency: 'MONTH' as const, amountCents: 2500 },
+    ],
   },
   {
-    name: 'Cotisation mensuelle',
-    description: 'Accès à tous les cours, sans engagement.',
-    amountCents: 2500,
-    interval: 'MONTH' as const,
+    name: 'Étudiant',
+    description: 'Sur présentation de la carte étudiante.',
     sortOrder: 1,
+    prices: [
+      { frequency: 'YEAR' as const, amountCents: 15000 },
+      { frequency: 'MONTH' as const, amountCents: 1500 },
+    ],
   },
 ];
 
@@ -79,7 +84,11 @@ async function main() {
       const existing = await prisma.plan.findFirst({
         where: { name: plan.name },
       });
-      if (!existing) await prisma.plan.create({ data: plan });
+      if (!existing) {
+        await prisma.plan.create({
+          data: { ...plan, prices: { create: plan.prices } },
+        });
+      }
     }
 
     const [aiko, julien] = users;
@@ -107,27 +116,43 @@ async function main() {
      * resource_missing, treated as already cancelled.
      */
     const [, , camille, hugo, sakura] = users;
-    const annual = await prisma.plan.findFirst({
+    const adult = await prisma.plan.findFirst({
       where: { name: PLANS[0].name },
-    });
-    const monthly = await prisma.plan.findFirst({
-      where: { name: PLANS[1].name },
     });
     const yearAhead = new Date(Date.now() + 300 * 24 * 3600 * 1000);
     const lastWeek = new Date(Date.now() - 7 * 24 * 3600 * 1000);
     const states = [
-      { user: camille, plan: annual, status: 'active', end: yearAhead },
-      { user: sakura, plan: annual, status: 'active', end: yearAhead },
-      { user: hugo, plan: monthly, status: 'past_due', end: lastWeek },
-    ];
-    for (const { user, plan, status, end } of states) {
+      {
+        user: camille,
+        frequency: 'YEAR',
+        amount: 25000,
+        status: 'active',
+        end: yearAhead,
+      },
+      {
+        user: sakura,
+        frequency: 'QUARTER',
+        amount: 7000,
+        status: 'active',
+        end: yearAhead,
+      },
+      {
+        user: hugo,
+        frequency: 'MONTH',
+        amount: 2500,
+        status: 'past_due',
+        end: lastWeek,
+      },
+    ] as const;
+    for (const { user, frequency, amount, status, end } of states) {
       const stripeSubscriptionId = `sub_demo_${user.id.slice(0, 8)}`;
       await prisma.subscription.upsert({
         where: { stripeSubscriptionId },
         update: {},
         create: {
           userId: user.id,
-          planId: plan?.id ?? null,
+          planId: adult?.id ?? null,
+          frequency,
           stripeSubscriptionId,
           status,
           currentPeriodEnd: end,
@@ -139,7 +164,7 @@ async function main() {
         create: {
           userId: user.id,
           stripeInvoiceId: `in_demo_${user.id.slice(0, 8)}`,
-          amountCents: plan?.amountCents ?? 0,
+          amountCents: amount,
           status: status === 'active' ? 'PAID' : 'FAILED',
           paidAt: status === 'active' ? lastWeek : null,
         },
