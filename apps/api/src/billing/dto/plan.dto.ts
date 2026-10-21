@@ -58,6 +58,13 @@ export class CreatePlanDto {
   @Min(0)
   sortOrder?: number;
 
+  // Billed with the first payment, then at each yearly anniversary.
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100_000)
+  entranceFeeCents?: number;
+
   // Up to one row per frequency; the service checks at least one is offered.
   @IsArray()
   @ArrayMinSize(1)
@@ -88,6 +95,12 @@ export class UpdatePlanDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
   active?: boolean;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsInt()
+  @Min(0)
+  @Max(100_000)
+  entranceFeeCents?: number;
 
   // Frequencies listed here are created or updated; the others are untouched.
   @ValidateIf((_, value) => value !== undefined)

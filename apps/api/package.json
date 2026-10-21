@@ -26,7 +26,8 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "admin:grant": "ts-node src/scripts/admin-grant.ts",
-    "admin:invite": "ts-node src/scripts/admin-invite.ts"
+    "admin:invite": "ts-node src/scripts/admin-invite.ts",
+    "grid:import": "ts-node src/scripts/import-grid.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

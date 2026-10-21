@@ -33,6 +33,7 @@ function setup() {
       configured: () => true,
     } as never,
     { syncFromStripe: sync } as never,
+    { markPaidFromSession: jest.fn() } as never,
   );
   return { service, sync };
 }

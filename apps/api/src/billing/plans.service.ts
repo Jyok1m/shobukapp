@@ -8,6 +8,8 @@ import { randomUUID } from 'node:crypto';
 import type Stripe from 'stripe';
 import type { Plan, PlanPrice } from '../generated/prisma/client';
 import type { PlanInterval } from '../generated/prisma/enums';
+import { MailService } from '../mail/mail.service';
+import type { GridPlan } from './grids';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlanDto, PlanPriceDto, UpdatePlanDto } from './dto/plan.dto';
 import { MODE_FIELDS, StripeMode, StripeService } from './stripe.service';
@@ -47,7 +49,7 @@ type PlanWithPrices = Plan & { prices: PlanPrice[] };
 
 export type PublicPlan = Pick<
   Plan,
-  'id' | 'name' | 'description' | 'currency'
+  'id' | 'name' | 'description' | 'currency' | 'entranceFeeCents'
 > & {
   prices: {
     frequency: PlanInterval;
@@ -82,6 +84,7 @@ export class PlansService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
+    private readonly mail: MailService,
   ) {}
 
   async listPublic(): Promise<PublicPlan[]> {
@@ -96,6 +99,7 @@ export class PlansService {
       name: plan.name,
       description: plan.description,
       currency: plan.currency,
+      entranceFeeCents: plan.entranceFeeCents,
       prices: sortPrices(plan.prices.filter((p) => p.active)).map((p) => ({
         frequency: p.frequency,
         amountCents: p.amountCents,
@@ -126,7 +130,10 @@ export class PlansService {
     };
   }
 
-  async create(dto: CreatePlanDto): Promise<AdminPlan> {
+  async create(
+    dto: CreatePlanDto,
+    slug: string | null = null,
+  ): Promise<AdminPlan> {
     const prices = this.validatePrices(dto.prices, true);
     const id = randomUUID();
     const draft: PlanWithPrices = {
@@ -136,6 +143,8 @@ export class PlansService {
       currency: 'eur',
       active: true,
       sortOrder: dto.sortOrder ?? 0,
+      slug,
+      entranceFeeCents: dto.entranceFeeCents ?? 0,
       stripeTestProductId: null,
       stripeLiveProductId: null,
       createdAt: new Date(),
@@ -143,15 +152,17 @@ export class PlansService {
       prices: prices.map((p) => this.priceRow(id, p)),
     };
     const { mode, client } = await this.stripe.current();
-    const synced = client
+    const { plan: synced } = client
       ? await this.syncPlan(client, mode, draft, draft)
-      : draft;
+      : { plan: draft };
     const created = await this.prisma.plan.create({
       data: {
         id,
+        slug,
         name: synced.name,
         description: synced.description,
         sortOrder: synced.sortOrder,
+        entranceFeeCents: synced.entranceFeeCents,
         stripeTestProductId: synced.stripeTestProductId,
         stripeLiveProductId: synced.stripeLiveProductId,
         prices: {
@@ -173,10 +184,167 @@ export class PlansService {
     const current = await this.find(id);
     const next = this.applyUpdate(current, dto);
     const { mode, client } = await this.stripe.current();
-    const synced = client
-      ? await this.syncPlan(client, mode, current, next)
-      : next;
-    return this.toAdmin(await this.save(synced), mode);
+    if (!client) return this.toAdmin(await this.save(next), mode);
+    const { plan: synced, replaced } = await this.syncPlan(
+      client,
+      mode,
+      current,
+      next,
+    );
+    const saved = await this.save(synced);
+    await this.moveSubscribers(client, mode, saved, replaced);
+    return this.toAdmin(saved, mode);
+  }
+
+  /*
+   * A season's grid (src/billing/grids): plans are matched by slug, created
+   * when new, otherwise updated like an admin edit would, so their current
+   * subscribers move to the new prices at renewal. A frequency missing from
+   * the grid stops being offered.
+   */
+  async upsertFromGrid(plan: GridPlan, sortOrder: number): Promise<AdminPlan> {
+    const prices = FREQUENCY_ORDER.map((frequency) => ({
+      frequency,
+      amountCents: plan.prices[frequency] ?? 0,
+      active: plan.prices[frequency] !== undefined,
+    }));
+    const existing = await this.prisma.plan.findUnique({
+      where: { slug: plan.slug },
+      include: withPrices,
+    });
+    if (!existing) {
+      return this.create(
+        {
+          name: plan.name,
+          description: plan.description,
+          sortOrder,
+          entranceFeeCents: plan.entranceFeeCents,
+          prices: prices.filter((p) => p.active),
+        },
+        plan.slug,
+      );
+    }
+    return this.update(existing.id, {
+      name: plan.name,
+      description: plan.description,
+      sortOrder,
+      active: true,
+      entranceFeeCents: plan.entranceFeeCents,
+      // A frequency the grid drops keeps its last amount, simply not offered.
+      prices: prices
+        .filter(
+          (p) =>
+            p.active ||
+            existing.prices.some(
+              (e) => e.frequency === p.frequency && e.active,
+            ),
+        )
+        .map((p) =>
+          p.active
+            ? p
+            : {
+                ...p,
+                amountCents: existing.prices.find(
+                  (e) => e.frequency === p.frequency,
+                )!.amountCents,
+              },
+        ),
+    });
+  }
+
+  // Plans outside the imported grid (older test plans) stop being sold.
+  async archiveOutside(slugs: string[]): Promise<string[]> {
+    const others = await this.prisma.plan.findMany({
+      where: {
+        active: true,
+        OR: [{ slug: null }, { slug: { notIn: slugs } }],
+      },
+      select: { id: true, name: true },
+    });
+    for (const plan of others) await this.archive(plan.id);
+    return others.map((p) => p.name);
+  }
+
+  /*
+   * Prices move with the grid (docs/billing.md, Seasons): a subscriber still on
+   * an older price of the same plan and frequency is switched to the new one
+   * without proration, so the change applies at their next renewal, and is
+   * told by mail with both amounts and the date.
+   */
+  private async moveSubscribers(
+    client: Stripe,
+    mode: StripeMode,
+    plan: PlanWithPrices,
+    frequencies: PlanInterval[],
+  ): Promise<void> {
+    if (frequencies.length === 0) return;
+    const subscriptions = await this.prisma.subscription.findMany({
+      where: {
+        planId: plan.id,
+        frequency: { in: frequencies },
+        livemode: mode === 'live',
+        status: { in: ['active', 'trialing', 'past_due'] },
+        cancelAtPeriodEnd: false,
+      },
+      include: { user: { select: { email: true, firstName: true } } },
+    });
+    for (const sub of subscriptions) {
+      const price = plan.prices.find((p) => p.frequency === sub.frequency);
+      const newPriceId = price?.[MODE_FIELDS[mode].price];
+      if (!price || !newPriceId) continue;
+      try {
+        const remote = await client.subscriptions.retrieve(
+          sub.stripeSubscriptionId,
+        );
+        const item = remote.items.data[0];
+        if (!item || item.price.id === newPriceId) continue;
+        await client.subscriptions.update(
+          remote.id,
+          {
+            items: [{ id: item.id, price: newPriceId }],
+            proration_behavior: 'none',
+          },
+          { idempotencyKey: `price-move-${remote.id}-${newPriceId}` },
+        );
+        await this.prisma.subscription.update({
+          where: { id: sub.id },
+          data: { stripePriceId: newPriceId },
+        });
+        const from = item.price.unit_amount ?? 0;
+        const euros = (cents: number) =>
+          new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: plan.currency,
+          }).format(cents / 100);
+        const date = sub.currentPeriodEnd
+          ? new Intl.DateTimeFormat('fr-FR', {
+              timeZone: 'Europe/Paris',
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            }).format(sub.currentPeriodEnd)
+          : 'votre prochaine échéance';
+        await this.mail
+          .send({
+            to: sub.user.email,
+            subject: 'Shobukan Dojo : évolution de votre cotisation',
+            text: [
+              `Bonjour ${sub.user.firstName},`,
+              '',
+              `La grille des cotisations évolue. À partir de votre prochaine échéance (${date}), votre cotisation « ${plan.name} » passe de ${euros(from)} à ${euros(price.amountCents)}.`,
+              "Rien ne change d'ici là. Vous pouvez gérer ou résilier votre cotisation depuis votre espace, rubrique « Ma cotisation ».",
+              '',
+              'Le bureau du Shobukan Dojo',
+            ].join('\n'),
+          })
+          .catch(() => undefined);
+      } catch (error) {
+        // One subscriber failing must not stop the others; the next edit retries.
+        this.logger.error(
+          `Could not move ${sub.stripeSubscriptionId} to ${newPriceId}: ${String(error)}`,
+        );
+      }
+    }
   }
 
   // Archive, never delete: a plan someone still pays cannot disappear.
@@ -202,8 +370,15 @@ export class PlansService {
     const client = this.stripe.require(mode);
     const plans = await this.prisma.plan.findMany({ include: withPrices });
     for (const plan of plans) {
-      const synced = await this.syncPlan(client, mode, plan, plan, true);
-      await this.save(synced);
+      const { plan: synced, replaced } = await this.syncPlan(
+        client,
+        mode,
+        plan,
+        plan,
+        true,
+      );
+      const saved = await this.save(synced);
+      await this.moveSubscribers(client, mode, saved, replaced);
     }
   }
 
@@ -241,6 +416,9 @@ export class PlansService {
       ...(dto.name !== undefined && { name: dto.name }),
       ...(dto.description !== undefined && { description: dto.description }),
       ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+      ...(dto.entranceFeeCents !== undefined && {
+        entranceFeeCents: dto.entranceFeeCents,
+      }),
       ...(dto.active !== undefined && { active: dto.active }),
       prices: current.prices.map((p) => ({ ...p })),
     };
@@ -273,6 +451,7 @@ export class PlansService {
           description: plan.description,
           sortOrder: plan.sortOrder,
           active: plan.active,
+          entranceFeeCents: plan.entranceFeeCents,
           stripeTestProductId: plan.stripeTestProductId,
           stripeLiveProductId: plan.stripeLiveProductId,
         },
@@ -310,18 +489,20 @@ export class PlansService {
     current: PlanWithPrices,
     next: PlanWithPrices,
     compareRemote = false,
-  ): Promise<PlanWithPrices> {
+  ): Promise<{ plan: PlanWithPrices; replaced: PlanInterval[] }> {
     const result: PlanWithPrices = {
       ...next,
       prices: next.prices.map((p) => ({ ...p })),
     };
+    // Frequencies whose sold price was replaced: their subscribers move.
+    const replaced: PlanInterval[] = [];
     const productField = MODE_FIELDS[mode].product;
     let productId = current[productField];
     const sells = next.active && next.prices.some((p) => p.active);
 
     if (!productId) {
       // A plan never sold in this mode and not on sale has nothing to create.
-      if (!sells) return result;
+      if (!sells) return { plan: result, replaced };
       const product = await client.products.create(
         {
           name: next.name,
@@ -373,7 +554,10 @@ export class PlansService {
         this.logger.log(
           `Created Stripe price ${created.id} for plan ${next.id} (${price.frequency})`,
         );
-        if (priceId) await client.prices.update(priceId, { active: false });
+        if (priceId) {
+          await client.prices.update(priceId, { active: false });
+          replaced.push(price.frequency);
+        }
         price[field] = created.id;
       } else if (stale && priceId) {
         // Changed while not on sale: the old price must never come back with
@@ -384,6 +568,6 @@ export class PlansService {
         await client.prices.update(priceId, { active: onSale });
       }
     }
-    return result;
+    return { plan: result, replaced };
   }
 }

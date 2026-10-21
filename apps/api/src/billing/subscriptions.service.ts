@@ -57,6 +57,7 @@ export type MembershipView = {
   testMode: boolean;
   // Live mode, and a cotisation paid in test mode: it does not carry over.
   testCotisationNotCarried: boolean;
+  entranceFeePaidUntil: Date | null;
   payments: {
     id: string;
     amountCents: number;
@@ -180,6 +181,12 @@ export class SubscriptionsService {
       ),
       testMode: mode === 'test',
       testCotisationNotCarried: testLeftover,
+      // The annual entrance fee is paid until then: no fee at the next checkout.
+      entranceFeePaidUntil:
+        subscriptions
+          .map((s) => s.entranceFeeDueAt)
+          .filter((d): d is Date => Boolean(d && d > new Date()))
+          .sort((a, b) => b.getTime() - a.getTime())[0] ?? null,
       payments,
     };
   }
@@ -192,7 +199,19 @@ export class SubscriptionsService {
     const { mode, client: stripe } = await this.stripe.requireCurrent();
     const price = await this.prisma.planPrice.findUnique({
       where: { planId_frequency: { planId, frequency } },
-      include: { plan: { select: { id: true, active: true } } },
+      include: {
+        plan: {
+          select: {
+            id: true,
+            active: true,
+            name: true,
+            entranceFeeCents: true,
+            currency: true,
+            stripeTestProductId: true,
+            stripeLiveProductId: true,
+          },
+        },
+      },
     });
     const priceId = price?.[MODE_FIELDS[mode].price];
     if (!price || !price.active || !price.plan.active || !priceId) {
@@ -209,6 +228,7 @@ export class SubscriptionsService {
     if (current) throw new ConflictException({ code: 'already_subscribed' });
 
     const customer = await this.ensureCustomer(user, mode, stripe);
+    const entrance = await this.entranceFeeAtCheckout(user.id, mode, plan);
     // The local table only fills on webhook: ask Stripe too, so two tabs
     // cannot open two subscriptions before the first event lands.
     const remote = await stripe.subscriptions.list({
@@ -224,10 +244,33 @@ export class SubscriptionsService {
       mode: 'subscription',
       customer,
       client_reference_id: user.id,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [
+        { price: priceId, quantity: 1 },
+        // One-time: added to the first invoice only (docs/billing.md).
+        ...(entrance.chargeNow
+          ? [
+              {
+                quantity: 1,
+                price_data: {
+                  currency: plan.currency,
+                  // Its own line on the invoice, not the plan's name.
+                  product_data: { name: "Droit d'entrée annuel" },
+                  unit_amount: plan.entranceFeeCents,
+                },
+              },
+            ]
+          : []),
+      ],
       metadata: { userId: user.id, planId: plan.id, frequency },
       subscription_data: {
-        metadata: { userId: user.id, planId: plan.id, frequency },
+        metadata: {
+          userId: user.id,
+          planId: plan.id,
+          frequency,
+          ...(entrance.nextDueAt && {
+            entranceFeeDueAt: entrance.nextDueAt.toISOString(),
+          }),
+        },
       },
       ...(mode === 'test' && {
         custom_text: {
@@ -462,12 +505,103 @@ export class SubscriptionsService {
         ? new Date(item.current_period_end * 1000)
         : null,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      stripePriceId: item?.price.id ?? null,
       livemode: subscription.livemode,
     };
+    const dueAt = subscription.metadata?.entranceFeeDueAt;
     await this.prisma.subscription.upsert({
       where: { stripeSubscriptionId: subscription.id },
-      create: { stripeSubscriptionId: subscription.id, ...data },
+      create: {
+        stripeSubscriptionId: subscription.id,
+        ...data,
+        entranceFeeDueAt: dueAt ? new Date(dueAt) : null,
+      },
+      // The due date moves on with each anniversary invoice, never from Stripe.
       update: data,
+    });
+  }
+
+  /*
+   * The entrance fee is yearly and goes with the person, not the subscription:
+   * one already paid within the last year (an earlier subscription, cancelled
+   * and taken again) is not charged twice.
+   */
+  private async entranceFeeAtCheckout(
+    userId: string,
+    mode: StripeMode,
+    plan: { entranceFeeCents: number },
+  ): Promise<{ chargeNow: boolean; nextDueAt: Date | null }> {
+    const covered = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        livemode: mode === 'live',
+        entranceFeeDueAt: { gt: new Date() },
+      },
+      orderBy: { entranceFeeDueAt: 'desc' },
+      select: { entranceFeeDueAt: true },
+    });
+    if (covered?.entranceFeeDueAt) {
+      return { chargeNow: false, nextDueAt: covered.entranceFeeDueAt };
+    }
+    // No fee on this plan: nothing paid, so nothing covered either.
+    if (plan.entranceFeeCents <= 0)
+      return { chargeNow: false, nextDueAt: null };
+    const nextDueAt = new Date();
+    nextDueAt.setUTCFullYear(nextDueAt.getUTCFullYear() + 1);
+    return { chargeNow: true, nextDueAt };
+  }
+
+  /*
+   * invoice.created, renewal invoices only: Stripe keeps them as drafts for
+   * about an hour, the window to add the yearly entrance fee once the
+   * anniversary is reached. The current amount of the plan applies, so a new
+   * season's fee follows the grid. Keyed on the invoice: a replay adds nothing.
+   */
+  async addEntranceFee(invoice: Stripe.Invoice, mode: StripeMode) {
+    if (
+      invoice.billing_reason !== 'subscription_cycle' ||
+      invoice.status !== 'draft' ||
+      !invoice.id
+    ) {
+      return;
+    }
+    const subscriptionId = stripeId(
+      invoice.parent?.subscription_details?.subscription ?? null,
+    );
+    if (!subscriptionId) return;
+    const sub = await this.prisma.subscription.findUnique({
+      where: { stripeSubscriptionId: subscriptionId },
+      include: { plan: { select: { entranceFeeCents: true, currency: true } } },
+    });
+    // A day of slack: the renewal is created a little before the anniversary.
+    const now = Date.now() + 24 * 3600 * 1000;
+    if (
+      !sub?.entranceFeeDueAt ||
+      !sub.plan ||
+      sub.plan.entranceFeeCents <= 0 ||
+      sub.entranceFeeDueAt.getTime() > now
+    ) {
+      return;
+    }
+    const customer = stripeId(invoice.customer);
+    if (!customer) return;
+    await this.stripe.require(mode).invoiceItems.create(
+      {
+        customer,
+        invoice: invoice.id,
+        amount: sub.plan.entranceFeeCents,
+        currency: sub.plan.currency,
+        description: "Droit d'entrée annuel",
+      },
+      { idempotencyKey: `entrance-${invoice.id}` },
+    );
+    // Long overdue (a long past_due spell): the next one is still in the future.
+    const next = new Date(sub.entranceFeeDueAt);
+    do next.setUTCFullYear(next.getUTCFullYear() + 1);
+    while (next.getTime() <= now);
+    await this.prisma.subscription.update({
+      where: { id: sub.id },
+      data: { entranceFeeDueAt: next },
     });
   }
 
@@ -526,7 +660,7 @@ export class SubscriptionsService {
     return null;
   }
 
-  private async ensureCustomer(
+  async ensureCustomer(
     user: SelfUser,
     mode: StripeMode,
     stripe: Stripe,

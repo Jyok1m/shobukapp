@@ -2,9 +2,32 @@
 
 Stripe holds prices, cards, invoices and retries. The database holds a mirror good enough to list, filter and decide access.
 
-## The dojo's grid (2026/2027)
+## Seasons and the dojo's grid
 
-Cotisations are per number of weekly units (1 unité = 1 discipline once a week): adults 1, 2, 3 units or unlimited, quarterly or yearly; children (up to 14) 1 or 2 units, quarterly only. The seed reproduces it. Not handled online yet: the annual entrance fee (60 € adult, 45 € child), the FFJDA licence and insurance (56 €), the sports passport (10 €, valid 8 years), private lessons and drop-in classes; the landing says they are paid at the dojo.
+The grid is versioned in code, one file per season (`apps/api/src/billing/grids/2026-2027.ts`), from the dojo's printed grid: cotisations per number of weekly units (1 unité = 1 discipline once a week), adults 1, 2, 3 units or unlimited, children (up to 14) 1 or 2 units, each yearly, quarterly and monthly. Monthly is the quarterly amount / 3 and the children's yearly amount is quarterly x 4, as on the printed grid (child 1 unit monthly: 48.33 €, one cent under a third of 145 €).
+
+- `pnpm --filter @shobukapp/api grid:import <season> [--archive-others]` (in a container: `docker exec shobukapp-api node dist/src/scripts/import-grid.js <season>`): upserts plans and products **by slug** in the current Stripe mode, like an admin edit would. `--archive-others` archives the active plans missing from the grid. Run it again after switching to live.
+- A new season is a new file in `GRIDS`, then an import. Same slugs, new amounts: Stripe gets new prices, the old ones are deactivated.
+- **Price changes reach current members at their next renewal.** `PlansService.moveSubscribers` swaps the item of each live subscription on a replaced price to the new one with `proration_behavior: none` (nothing invoiced now, the next invoice uses the new amount), stores `subscriptions.stripe_price_id` and mails the member the old and new amounts with the date. Same path for an amount edited in "Formules". Idempotency key: subscription and new price. A subscription set to cancel at period end is left alone.
+
+## Annual entrance fee
+
+`plans.entrance_fee_cents` (60 € adults, 45 € children; editable per plan). Stripe cannot mix yearly and monthly recurring items in one subscription, so it is not a recurring price:
+
+- At checkout, a one-time line item "Droit d'entrée annuel" is added unless a subscription of the same mode has `entrance_fee_due_at` in the future (paid less than a year ago, then re-subscribed). The next due date (now + 1 year) travels in `subscription_data.metadata.entranceFeeDueAt` and is stored on the first sync.
+- Then yearly: on `invoice.created` (`billing_reason = subscription_cycle`, still `draft`), when `entrance_fee_due_at` is reached (one day of slack), the API adds an invoice item to that draft (idempotency key per invoice) and moves the date one year on. Stripe finalizes a subscription invoice about an hour after creating it and waits for the `invoice.created` webhook to succeed, so the item lands in time. **The webhook endpoint must listen to `invoice.created`.**
+- A plan without fee sets no due date: a later subscription to a plan with one pays it. A long overdue date moves on until it is in the future.
+- Subscriptions created before this feature have no due date and are never charged the yearly fee (only test data existed then).
+- `GET /billing/subscription` returns `entranceFeePaidUntil`; `GET /billing/plans` returns `entranceFeeCents`.
+
+## One-off products and charges
+
+`products` (slug, kind `FEDERATION` or `MISC`, amount, `member_purchasable`, `per_season`), one Stripe product and one one-time price per mode. A new amount is a new price, but the old one stays active so links already sent keep working at the amount they announced; the other mode's price is recreated on its next use. `charges` is what a member owes or paid for one product, in one Stripe mode (`livemode`). Payments made off Stripe (paid at the dojo, declined, waived) count in both modes (`chargesOfMode`).
+
+- FFJDA licence and insurance (56 €, per season) and the sports passport (10 €, valid 8 years) are `FEDERATION`: the bureau decides. From a member's admin page, `POST /admin/members/:id/charges {productId, sendLink, note?}` records a pending charge (once per season for a per-season product, one pending passport at a time: `charge_exists`, serialized by an advisory lock per member and product) and, with `sendLink`, creates a **Stripe Payment Link** (card only, one completed payment max, `metadata.chargeId`) mailed to the member; the charge takes the product's current amount at that moment, so mail and link agree. A charge of the other Stripe mode gets no link (`charge_other_mode`). `POST /admin/charges/:id/link` sends it again. `PATCH /admin/charges/:id {status}` records a payment made at the dojo (`PAID`, method `MANUAL`), a refusal (`DECLINED`) or a waiver (`WAIVED`), and deactivates the link (back to `PENDING` reactivates it); a charge paid online cannot be changed here (`charge_paid_online`, refund in Stripe), the write is conditional so a webhook landing meanwhile wins.
+- `MISC` products marked `member_purchasable` (private lesson 60 €, drop-in class 25 €) are bought by the member: `GET /billing/products`, `POST /billing/products/:id/checkout` (Checkout in `payment` mode, cards only so the payment is immediate). An abandoned attempt's pending charge is reused by the next one, whose older session is expired.
+- `checkout.session.completed` in `payment` mode marks the charge `PAID` (method `STRIPE`), matched by `metadata.chargeId`, else by payment link or session id, always within the event's mode; a replay is a no-op.
+- `GET /billing/charges`: the member's own charges, the link only while pending. `GET /admin/members` carries `federation`: this season's licence and the passport status per member. Seasons run September to August (`currentSeason()`, Paris time).
 
 ## Frequencies
 
@@ -31,7 +54,7 @@ A cotisation (a plan, "Adulte", "Étudiant") can be paid **yearly, quarterly or 
 
 - A plan row maps to one Stripe product per mode, and each of its frequencies to one active Stripe price (see Frequencies).
 - Create: Stripe product, then Stripe price, then the row. Stripe first: an orphan product is harmless and visible in the Stripe dashboard, a row pointing to a nonexistent price breaks a payment. Calls carry an idempotency key.
-- **A Stripe price is immutable.** Changing the amount or interval creates a new price, points the plan to it and deactivates the old one. Current subscribers keep the old price until they change plan: Stripe does not migrate existing subscriptions.
+- **A Stripe price is immutable.** Changing the amount or interval creates a new price, points the plan to it and deactivates the old one. Stripe does not migrate existing subscriptions by itself: the API moves them at their next renewal (see Seasons).
 - Changing name or description updates the product.
 - Delete is an archive: the product and price are deactivated, the row gets `active = false`. A plan someone still pays cannot disappear.
 - No euro amount hardcoded anywhere: amounts come from the plan rows.
@@ -50,7 +73,9 @@ A cotisation (a plan, "Adulte", "Étudiant") can be paid **yearly, quarterly or 
 `POST /billing/webhook`, public, raw body (`NestFactory.create(AppModule, { rawBody: true })`): the signature is computed on the received bytes.
 
 - Idempotence: an event already in `stripe_events` is answered 200 without processing. See below for when it is written.
-- `checkout.session.completed`, `customer.subscription.created|updated|deleted`: upsert `subscriptions` from the Stripe object (re-fetched, not trusted from the event payload, since order is not guaranteed).
+- `checkout.session.completed` in `payment` mode settles a charge (see One-off products).
+- `invoice.created`: adds the annual entrance fee to a renewal draft when due.
+- `checkout.session.completed` (subscription), `customer.subscription.created|updated|deleted`: upsert `subscriptions` from the Stripe object (re-fetched, not trusted from the event payload, since order is not guaranteed).
 - `invoice.paid`: insert into `payments` as `PAID`.
 - `invoice.payment_failed`: insert as `FAILED`, never over a `PAID` row (a late failure notice must not undo a payment). It cuts nothing: `past_due` still counts as a member (`MEMBER_STATUSES`), Stripe retries, and `customer.subscription.deleted` is what ends access.
 - Subscriptions are matched to a plan by **Stripe product**, not price: after an amount change, existing subscribers keep the old price, which is no longer the plan's `stripe_price_id`. An unknown product is logged and the subscription is stored without a plan, never guessed.

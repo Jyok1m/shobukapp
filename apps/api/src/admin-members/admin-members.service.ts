@@ -20,6 +20,8 @@ import {
 import { selfUserSelect, SelfUser } from '../common/self-user';
 import { toProfileData } from '../users/users.service';
 import { UpdateProfileDto } from '../users/dto/profile.dto';
+import { chargesOfMode } from '../billing/products/products.service';
+import { currentSeason } from '../billing/products/season';
 import { ErasureService } from './erasure.service';
 import {
   CreateMemberDto,
@@ -30,7 +32,7 @@ import {
 const PAGE_SIZE = 50;
 
 // Subscriptions and payments of the current Stripe mode only (docs/billing.md).
-const listSelect = (livemode: boolean) =>
+const listSelect = (livemode: boolean, season: string) =>
   ({
     id: true,
     email: true,
@@ -66,6 +68,16 @@ const listSelect = (livemode: boolean) =>
       orderBy: { validUntil: { sort: 'desc', nulls: 'last' } },
       take: 1,
       select: { validUntil: true },
+    },
+    // Licence and passport: this season's charge, or the passport ever paid.
+    charges: {
+      where: {
+        product: { kind: 'FEDERATION' },
+        AND: [{ OR: [{ season }, { season: null }] }, chargesOfMode(livemode)],
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: { status: true, product: { select: { slug: true, name: true } } },
     },
     _count: { select: { payments: { where: { status: 'FAILED', livemode } } } },
   }) satisfies Prisma.UserSelect;
@@ -129,6 +141,21 @@ function toListItem(row: ListRow) {
     medicalCertificate: row.documents[0]
       ? { validUntil: row.documents[0].validUntil }
       : null,
+    // Latest charge per federation product, PAID winning over a newer one.
+    federation: Object.values(
+      row.charges.reduce<
+        Record<string, { slug: string; name: string; status: string }>
+      >((acc, charge) => {
+        const known = acc[charge.product.slug];
+        if (!known || (known.status !== 'PAID' && charge.status === 'PAID')) {
+          acc[charge.product.slug] = {
+            ...charge.product,
+            status: charge.status,
+          };
+        }
+        return acc;
+      }, {}),
+    ),
   };
 }
 
@@ -172,7 +199,7 @@ export class AdminMembersService {
     };
     const rows = await this.prisma.user.findMany({
       where,
-      select: listSelect(livemode),
+      select: listSelect(livemode, currentSeason()),
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' }],
       take: PAGE_SIZE + 1,
       ...(query.cursor && { cursor: { id: query.cursor }, skip: 1 }),

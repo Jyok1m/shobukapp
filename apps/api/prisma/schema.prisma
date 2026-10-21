@@ -50,6 +50,23 @@ enum DocumentPlacement {
   IMPORTANT
 }
 
+enum ProductKind {
+  FEDERATION
+  MISC
+}
+
+enum ChargeStatus {
+  PENDING
+  PAID
+  DECLINED
+  WAIVED
+}
+
+enum ChargeMethod {
+  STRIPE
+  MANUAL
+}
+
 enum ReminderChannel {
   EMAIL
 }
@@ -112,6 +129,8 @@ model User {
   invitationsSent     Invitation[]      @relation("InvitationAuthor")
   invitationUsed      Invitation?       @relation("InvitationUser")
   joinRequestsHandled JoinRequest[]
+  charges             Charge[]          @relation("ChargeMember")
+  chargesCreated      Charge[]          @relation("ChargeAuthor")
   roleChanges         RoleChange[]      @relation("RoleChangeTarget")
   roleChangesMade     RoleChange[]      @relation("RoleChangeAuthor")
   settingsChanged     AppSettings[]
@@ -135,9 +154,14 @@ model Session {
 
 model Plan {
   id                  String   @id @default(uuid()) @db.Uuid
+  // Stable key of a plan in the yearly grid (src/billing/grids), so a new
+  // season updates the same plan instead of creating another one.
+  slug                String?  @unique
   name                String
   description         String?
   currency            String   @default("eur")
+  // Billed once with the first payment, then at each yearly anniversary.
+  entranceFeeCents    Int      @default(0) @map("entrance_fee_cents")
   // One Stripe product per mode; each frequency is a price under it.
   stripeTestProductId String?  @unique @map("stripe_test_product_id")
   stripeLiveProductId String?  @unique @map("stripe_live_product_id")
@@ -179,6 +203,9 @@ model Subscription {
   currentPeriodEnd     DateTime?     @map("current_period_end")
   cancelAtPeriodEnd    Boolean       @default(false) @map("cancel_at_period_end")
   frequency            PlanInterval?
+  stripePriceId        String?       @map("stripe_price_id")
+  // Next yearly entrance fee: added to the first renewal invoice on or after it.
+  entranceFeeDueAt     DateTime?     @map("entrance_fee_due_at")
   livemode             Boolean       @default(false)
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
@@ -373,4 +400,61 @@ model AppSettings {
   updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@map("app_settings")
+}
+
+// One-off products, no subscription: FFJDA licence and insurance, sports
+// passport (sent by the bureau as payment links), private lessons, drop-in
+// classes (docs/billing.md, One-off products).
+model Product {
+  id                  String      @id @default(uuid()) @db.Uuid
+  slug                String      @unique
+  name                String
+  description         String?
+  kind                ProductKind
+  amountCents         Int         @map("amount_cents")
+  currency            String      @default("eur")
+  // A member may buy it alone from the dashboard; otherwise the bureau sends it.
+  memberPurchasable   Boolean     @default(false) @map("member_purchasable")
+  // Due once per season (licence), not once for good.
+  perSeason           Boolean     @default(false) @map("per_season")
+  stripeTestProductId String?     @unique @map("stripe_test_product_id")
+  stripeTestPriceId   String?     @unique @map("stripe_test_price_id")
+  stripeLiveProductId String?     @unique @map("stripe_live_product_id")
+  stripeLivePriceId   String?     @unique @map("stripe_live_price_id")
+  active              Boolean     @default(true)
+  sortOrder           Int         @default(0) @map("sort_order")
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+
+  charges Charge[]
+
+  @@map("products")
+}
+
+// What a member owes or paid for a one-off product, and how.
+model Charge {
+  id                      String        @id @default(uuid()) @db.Uuid
+  userId                  String        @map("user_id") @db.Uuid
+  productId               String        @map("product_id") @db.Uuid
+  amountCents             Int           @map("amount_cents")
+  currency                String        @default("eur")
+  status                  ChargeStatus  @default(PENDING)
+  method                  ChargeMethod?
+  season                  String?
+  note                    String?
+  livemode                Boolean       @default(false)
+  stripePaymentLinkId     String?       @unique @map("stripe_payment_link_id")
+  stripePaymentLinkUrl    String?       @map("stripe_payment_link_url")
+  stripeCheckoutSessionId String?       @unique @map("stripe_checkout_session_id")
+  paidAt                  DateTime?     @map("paid_at")
+  createdById             String?       @map("created_by_id") @db.Uuid
+  createdAt               DateTime      @default(now()) @map("created_at")
+  updatedAt               DateTime      @updatedAt @map("updated_at")
+
+  user      User    @relation("ChargeMember", fields: [userId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  createdBy User?   @relation("ChargeAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@map("charges")
 }

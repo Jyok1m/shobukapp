@@ -19,7 +19,8 @@ Open question: if the dojo needs a third role (for example a board member who se
 ## Practitioner features
 
 - Ask to join with a message and an optional trial class ("Nous rejoindre"), then sign up from the link the dojo sends. Existing practitioners activate their account with a code from the dojo ("Activation"). Sign in, sign out ("Connexion").
-- See the dojo plans and buy one through Stripe Checkout, then manage it (card, invoices, cancellation) through the Stripe Customer Portal ("Ma cotisation"; the UI says cotisation, never abonnement).
+- See the dojo plans and buy one through Stripe Checkout, the annual entrance fee included, then manage it (card, invoices, cancellation) through the Stripe Customer Portal ("Ma cotisation"; the UI says cotisation, never abonnement).
+- Pay the FFJDA licence and insurance or the sports passport from the link the bureau sends, and buy a private lesson or a drop-in class from the dashboard.
 - See the directory of members who opted in: name, photo, phone, email ("Annuaire").
 - Send and receive 1:1 messages with other members ("Messagerie").
 - Upload, replace, rename and delete their own documents, first of all the medical certificate ("Mes documents").
@@ -30,7 +31,8 @@ Open question: if the dojo needs a third role (for example a board member who se
 ## Admin features
 
 - Read join requests, send a signup link or decline ("Demandes"); issue activation codes for existing practitioners ("Invitations").
-- CRUD on plans, synchronised with Stripe products and prices ("Formules").
+- CRUD on plans, synchronised with Stripe products and prices ("Formules"); the season's grid is imported from code, and a price change reaches members at their next renewal (`billing.md`, Seasons).
+- Edit one-off products ("Produits"); for a practitioner, send a payment link for the FFJDA licence and insurance or the sports passport, or record it as paid at the dojo, declined or waived; see each practitioner's licence and passport status in the list.
 - List practitioners with their subscription status, last payment and failed payments; open a practitioner's detail ("Pratiquants").
 - Send a payment reminder to a practitioner, logged with its author and date ("Relancer").
 - CRUD on dojo documents: legal (statuts, règlement intérieur, assurance) and accounting (bilans, factures) ("Documents du dojo").

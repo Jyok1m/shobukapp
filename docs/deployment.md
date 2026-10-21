@@ -37,7 +37,7 @@ GitHub Actions (`.github/workflows/trigger_jenkins.yml`) triggers the Jenkins jo
 
 ## Manual steps
 
-1. Fill the Stripe keys in `iac-journey/ansible/vaults/shobukapp.yml` (`ansible-vault edit`): production reads `shobukapp_vault_stripe_test_secret_key`, `_test_webhook_secret`, `_live_secret_key`, `_live_webhook_secret`; dev reads `shobukapp_vault_stripe_dev_secret_key` and `_dev_webhook_secret`. Declare the webhook endpoints in Stripe: production URL once in test mode and once in live mode, dev URL in test mode (events: `checkout.session.completed`, `customer.subscription.created|updated|deleted`, `invoice.paid`, `invoice.payment_failed`).
+1. Fill the Stripe keys in `iac-journey/ansible/vaults/shobukapp.yml` (`ansible-vault edit`): production reads `shobukapp_vault_stripe_test_secret_key`, `_test_webhook_secret`, `_live_secret_key`, `_live_webhook_secret`; dev reads `shobukapp_vault_stripe_dev_secret_key` and `_dev_webhook_secret`. Declare the webhook endpoints in Stripe: production URL once in test mode and once in live mode, dev URL in test mode (events: `checkout.session.completed`, `customer.subscription.created|updated|deleted`, `invoice.created`, `invoice.paid`, `invoice.payment_failed`). After a deploy that changes the grid, import it in each environment: `docker exec shobukapp-api node dist/src/scripts/import-grid.js 2026-2027` (`billing.md`, Seasons).
 2. Add `traefik_vault_shobukapp_dev_basic_auth` (an htpasswd line) to `vaults/traefik.yml`, run `--tags traefik`.
 3. Create the OVH bucket `shobukapp` for backups.
 4. Create the Jenkins multibranch job `apps/shobukapp` like OdyssAI's, and the GitHub secrets `JENKINS_USER` and `JENKINS_API_TOKEN` on the repository.

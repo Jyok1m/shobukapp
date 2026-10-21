@@ -45,12 +45,13 @@ users            id, email (unique, lowercased), password_hash, role (PRACTITION
                  emergency_contact_name, emergency_contact_phone,
                  directory_visible (default false), stripe_customer_id (unique, nullable)
 sessions         id, user_id, token_hash (unique), expires_at, created_at
-plans            id, name, description, currency, stripe_test_product_id, stripe_live_product_id,
-                 active, sort_order
+plans            id, slug (unique, nullable: set by the grid import), name, description, currency,
+                 entrance_fee_cents, stripe_test_product_id, stripe_live_product_id, active, sort_order
 plan_prices      id, plan_id, frequency (YEAR|QUARTER|MONTH), amount_cents, active,
                  stripe_test_price_id, stripe_live_price_id, unique (plan_id, frequency)
 subscriptions    id, user_id, plan_id, stripe_subscription_id (unique), status,
-                 current_period_end, cancel_at_period_end
+                 current_period_end, cancel_at_period_end, frequency, stripe_price_id,
+                 entrance_fee_due_at, livemode
 payments         id, user_id, stripe_invoice_id (unique), amount_cents, status (PAID|FAILED|OPEN), paid_at
 stripe_events    id (Stripe event id, primary key = idempotence), type, received_at
 payment_reminders id, user_id, sent_by_id, channel (EMAIL), note, created_at
@@ -60,6 +61,12 @@ documents        id, owner_id (nullable: null means a dojo document), category
 licenses         id, user_id, season ("2026-2027"), number, storage_key, uploaded_by_id,
                  unique (user_id, season)
 messages         id, sender_id, recipient_id, body, read_at, created_at
+products         id, slug (unique), name, description, kind (FEDERATION|MISC), amount_cents, currency,
+                 member_purchasable, per_season, stripe_test/live_product_id, stripe_test/live_price_id,
+                 active, sort_order
+charges          id, user_id, product_id, amount_cents, currency, status (PENDING|PAID|DECLINED|WAIVED),
+                 method (STRIPE|MANUAL), season, note, livemode, stripe_payment_link_id (unique),
+                 stripe_payment_link_url, stripe_checkout_session_id (unique), paid_at, created_by_id
 ```
 
 `subscriptions.status` mirrors Stripe's values as a string: Stripe adds statuses over time and an enum would reject a webhook the day it does.

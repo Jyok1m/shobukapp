@@ -30,6 +30,8 @@ function plan(overrides: object = {}) {
     currency: 'eur',
     stripeTestProductId: 'prod_1',
     stripeLiveProductId: null,
+    slug: null,
+    entranceFeeCents: 0,
     active: true,
     sortOrder: 0,
     createdAt: new Date(),
@@ -50,14 +52,20 @@ function stripeMock() {
       update: jest.fn(),
       retrieve: jest.fn(),
     },
+    subscriptions: {
+      retrieve: jest.fn(),
+      update: jest.fn(),
+    },
   };
 }
 
 function setup(
   current: ReturnType<typeof plan>,
   mode: 'test' | 'live' = 'test',
+  subscribers: unknown[] = [],
 ) {
   const stripe = stripeMock();
+  const mail = { send: jest.fn().mockResolvedValue('sent') };
   const saved: unknown[] = [];
   const tx = {
     plan: {
@@ -73,6 +81,10 @@ function setup(
       findUnique: jest.fn().mockResolvedValue(current),
       findMany: jest.fn().mockResolvedValue([current]),
     },
+    subscription: {
+      findMany: jest.fn().mockResolvedValue(subscribers),
+      update: jest.fn(),
+    },
     $transaction: (fn: (t: typeof tx) => unknown) => fn(tx),
   };
   const service = new PlansService(
@@ -81,8 +93,9 @@ function setup(
       current: () => Promise.resolve({ mode, client: stripe }),
       require: () => stripe,
     } as never,
+    mail as never,
   );
-  return { service, stripe, saved };
+  return { service, stripe, saved, prisma, mail, tx };
 }
 
 describe('frequencyOf', () => {
@@ -132,6 +145,44 @@ describe('PlansService.update', () => {
     expect(stripe.prices.update).toHaveBeenCalledWith('price_year', {
       active: false,
     });
+  });
+
+  it('moves current subscribers to the new price at their next renewal', async () => {
+    const after = plan({
+      prices: [price('YEAR', 27000, { test: 'price_new' })],
+    });
+    const { service, stripe, prisma, mail, tx } = setup(plan(), 'test', [
+      {
+        id: 'sub-local',
+        stripeSubscriptionId: 'sub_1',
+        frequency: 'YEAR',
+        currentPeriodEnd: new Date('2027-09-01'),
+        user: { email: 'a@e2e.shobukapp.test', firstName: 'Aiko' },
+      },
+    ]);
+    tx.plan.findUniqueOrThrow.mockResolvedValue(after);
+    stripe.subscriptions.retrieve.mockResolvedValue({
+      id: 'sub_1',
+      items: {
+        data: [{ id: 'si_1', price: { id: 'price_year', unit_amount: 25000 } }],
+      },
+    });
+    await service.update(PLAN_ID, {
+      prices: [{ frequency: 'YEAR', amountCents: 27000, active: true }],
+    });
+    expect(stripe.subscriptions.update).toHaveBeenCalledWith(
+      'sub_1',
+      {
+        items: [{ id: 'si_1', price: 'price_new' }],
+        proration_behavior: 'none',
+      },
+      expect.anything(),
+    );
+    expect(prisma.subscription.update).toHaveBeenCalledWith({
+      where: { id: 'sub-local' },
+      data: { stripePriceId: 'price_new' },
+    });
+    expect(mail.send).toHaveBeenCalledTimes(1);
   });
 
   it('drops the price of a frequency changed while not offered', async () => {

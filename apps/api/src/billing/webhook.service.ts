@@ -9,6 +9,7 @@ import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { STRIPE_MODES, StripeMode, StripeService } from './stripe.service';
 import { SubscriptionsService } from './subscriptions.service';
+import { ProductsService } from './products/products.service';
 
 /*
  * The only source of entitlement (docs/billing.md, Webhook). Handlers are
@@ -23,6 +24,7 @@ export class WebhookService {
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
     private readonly subscriptions: SubscriptionsService,
+    private readonly products: ProductsService,
   ) {}
 
   /*
@@ -86,6 +88,10 @@ export class WebhookService {
   private async dispatch(event: Stripe.Event, mode: StripeMode): Promise<void> {
     switch (event.type) {
       case 'checkout.session.completed': {
+        if (event.data.object.mode === 'payment') {
+          await this.products.markPaidFromSession(event.data.object);
+          return;
+        }
         const subscription = event.data.object.subscription;
         if (subscription) {
           await this.subscriptions.syncFromStripe(
@@ -99,6 +105,9 @@ export class WebhookService {
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted':
         await this.subscriptions.syncFromStripe(event.data.object.id, mode);
+        return;
+      case 'invoice.created':
+        await this.subscriptions.addEntranceFee(event.data.object, mode);
         return;
       case 'invoice.paid':
         await this.subscriptions.recordInvoice(event.data.object, 'PAID');
