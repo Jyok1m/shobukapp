@@ -26,8 +26,8 @@
 
 ## FFJDA licences
 
-- One row per user and season (`unique(user_id, season)`), uploaded by an admin with the licence number and the PDF.
-- `GET /licenses` for the member, `GET /licenses/:id/file`; `GET /admin/licenses?userId=`, `POST /admin/licenses` (multipart: userId, season `YYYY-YYYY`, number, optional file: upsert on user and season), `DELETE /admin/licenses/:id` for admins. Licence mime types are sniffed on read, the table has no mime column.
-- Re-uploading for the same season replaces the file (the old one is removed) and keeps the row.
+- One row per user, season and discipline (`unique(user_id, season, discipline)`), uploaded by an admin with the licence number and the PDF. Disciplines: `KENDO`, `IAIDO`, `JODO`, `BATTODO`. The FFJDA number is the same for every discipline of a season, only the file differs: saving a number updates every row of that member and season. Licences from before the discipline column were backfilled as `KENDO`.
+- `GET /licenses` for the member, `GET /licenses/:id/file`; `GET /admin/licenses?userId=`, `POST /admin/licenses` (multipart: userId, season `YYYY-YYYY`, discipline, number, optional file: upsert on user, season and discipline), `DELETE /admin/licenses/:id` for admins. Licence mime types are sniffed on read, the table has no mime column.
+- Re-uploading for the same season and discipline replaces the file (the old one is removed) and keeps the row.
 - Download filenames are built from the title, ASCII only, with an extension derived from the sniffed type: an uploaded filename is never reused.
 - The legal information needed to request a licence comes from the profile (`members.md`). Generating the FFJDA request automatically is out of scope.

@@ -174,11 +174,18 @@ async function main() {
 
     for (const user of [camille, sakura]) {
       await prisma.license.upsert({
-        where: { userId_season: { userId: user.id, season: '2026-2027' } },
+        where: {
+          userId_season_discipline: {
+            userId: user.id,
+            season: '2026-2027',
+            discipline: 'KENDO',
+          },
+        },
         update: {},
         create: {
           userId: user.id,
           season: '2026-2027',
+          discipline: 'KENDO',
           number: `DEMO-2026-0${users.indexOf(user)}`,
         },
       });

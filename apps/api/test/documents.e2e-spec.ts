@@ -167,6 +167,7 @@ describe('Documents and licences (e2e)', () => {
       .set('Cookie', member.cookie)
       .field('userId', member.id)
       .field('season', '2026-2027')
+      .field('discipline', 'KENDO')
       .field('number', 'X')
       .expect(403);
     await request(server)
@@ -174,6 +175,15 @@ describe('Documents and licences (e2e)', () => {
       .set('Cookie', admin.cookie)
       .field('userId', member.id)
       .field('season', '2026')
+      .field('discipline', 'KENDO')
+      .field('number', 'X')
+      .expect(400);
+    await request(server)
+      .post('/admin/licenses')
+      .set('Cookie', admin.cookie)
+      .field('userId', member.id)
+      .field('season', '2026-2027')
+      .field('discipline', 'KARATE')
       .field('number', 'X')
       .expect(400);
 
@@ -182,6 +192,7 @@ describe('Documents and licences (e2e)', () => {
       .set('Cookie', admin.cookie)
       .field('userId', member.id)
       .field('season', '2026-2027')
+      .field('discipline', 'KENDO')
       .field('number', 'FFJDA-001')
       .attach('file', PDF, {
         filename: 'licence.pdf',
@@ -193,6 +204,7 @@ describe('Documents and licences (e2e)', () => {
       .set('Cookie', admin.cookie)
       .field('userId', member.id)
       .field('season', '2026-2027')
+      .field('discipline', 'KENDO')
       .field('number', 'FFJDA-002')
       .attach('file', PDF, {
         filename: 'licence.pdf',
@@ -202,6 +214,22 @@ describe('Documents and licences (e2e)', () => {
     const id = (first.body as { id: string }).id;
     expect((second.body as { id: string }).id).toBe(id);
 
+    // Another discipline: its own row and file, the season's number for both.
+    const iaido = await request(server)
+      .post('/admin/licenses')
+      .set('Cookie', admin.cookie)
+      .field('userId', member.id)
+      .field('season', '2026-2027')
+      .field('discipline', 'IAIDO')
+      .field('number', 'FFJDA-003')
+      .attach('file', PDF, {
+        filename: 'licence.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(201);
+    const iaidoId = (iaido.body as { id: string }).id;
+    expect(iaidoId).not.toBe(id);
+
     const mine = await request(server)
       .get('/licenses')
       .set('Cookie', member.cookie)
@@ -210,7 +238,15 @@ describe('Documents and licences (e2e)', () => {
       expect.objectContaining({
         id,
         season: '2026-2027',
-        number: 'FFJDA-002',
+        discipline: 'KENDO',
+        number: 'FFJDA-003',
+        hasFile: true,
+      }),
+      expect.objectContaining({
+        id: iaidoId,
+        season: '2026-2027',
+        discipline: 'IAIDO',
+        number: 'FFJDA-003',
         hasFile: true,
       }),
     ]);

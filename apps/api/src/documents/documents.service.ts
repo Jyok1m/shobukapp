@@ -36,6 +36,7 @@ const licenseSelect = {
   id: true,
   userId: true,
   season: true,
+  discipline: true,
   number: true,
   storageKey: true,
   createdAt: true,
@@ -182,7 +183,7 @@ export class DocumentsService {
   async licenses(where: Prisma.LicenseWhereInput) {
     const rows = await this.prisma.license.findMany({
       where,
-      orderBy: { season: 'desc' },
+      orderBy: [{ season: 'desc' }, { discipline: 'asc' }],
       select: licenseSelect,
     });
     return rows.map(({ storageKey, ...license }) => ({
@@ -207,28 +208,43 @@ export class DocumentsService {
           'image/webp',
         ])
       : null;
+    const unique = {
+      userId_season_discipline: {
+        userId: dto.userId,
+        season: dto.season,
+        discipline: dto.discipline,
+      },
+    };
     const previous = await this.prisma.license.findUnique({
-      where: { userId_season: { userId: dto.userId, season: dto.season } },
+      where: unique,
       select: { storageKey: true },
     });
     let license: Prisma.LicenseGetPayload<{ select: typeof licenseSelect }>;
     try {
-      license = await this.prisma.license.upsert({
-        where: { userId_season: { userId: dto.userId, season: dto.season } },
-        create: {
-          userId: dto.userId,
-          season: dto.season,
-          number: dto.number,
-          storageKey: key?.key ?? null,
-          uploadedById: admin.id,
-        },
-        update: {
-          number: dto.number,
-          uploadedById: admin.id,
-          ...(key && { storageKey: key.key }),
-        },
-        select: licenseSelect,
-      });
+      // The number belongs to the season: the other disciplines follow it.
+      [license] = await this.prisma.$transaction([
+        this.prisma.license.upsert({
+          where: unique,
+          create: {
+            userId: dto.userId,
+            season: dto.season,
+            discipline: dto.discipline,
+            number: dto.number,
+            storageKey: key?.key ?? null,
+            uploadedById: admin.id,
+          },
+          update: {
+            number: dto.number,
+            uploadedById: admin.id,
+            ...(key && { storageKey: key.key }),
+          },
+          select: licenseSelect,
+        }),
+        this.prisma.license.updateMany({
+          where: { userId: dto.userId, season: dto.season },
+          data: { number: dto.number },
+        }),
+      ]);
     } catch (error) {
       if (key) await this.storage.remove(key.key);
       throw error;
@@ -260,7 +276,10 @@ export class DocumentsService {
     return {
       stream: Readable.from(buffer),
       mimeType,
-      filename: safeFilename(`licence-ffjda-${license.season}`, mimeType),
+      filename: safeFilename(
+        `licence-ffjda-${license.season}-${license.discipline.toLowerCase()}`,
+        mimeType,
+      ),
     };
   }
 

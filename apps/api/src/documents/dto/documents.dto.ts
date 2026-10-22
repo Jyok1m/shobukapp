@@ -17,6 +17,8 @@ const trim = ({ value }: { value: unknown }) =>
 const dateOrNull = ({ value }: { value: unknown }) =>
   value === '' || value === 'null' ? null : value;
 
+export const DISCIPLINES = ['KENDO', 'IAIDO', 'JODO', 'BATTODO'] as const;
+
 export const MEMBER_CATEGORIES = ['MEDICAL_CERTIFICATE', 'OTHER'] as const;
 export const DOJO_CATEGORIES = [
   'LEGAL',
@@ -105,6 +107,9 @@ export class UpsertLicenseDto {
   // FFJDA seasons run September to August: "2026-2027".
   @Matches(/^\d{4}-\d{4}$/)
   season!: string;
+
+  @IsIn(DISCIPLINES)
+  discipline!: (typeof DISCIPLINES)[number];
 
   @Transform(trim)
   @IsString()

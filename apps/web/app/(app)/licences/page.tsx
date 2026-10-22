@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Th } from "@/components/ui/table";
 import { apiGet } from "@/lib/api";
+import { DISCIPLINE_LABELS } from "@/lib/documents";
 import { formatShortDate } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import type { License } from "@/lib/types";
@@ -22,7 +23,7 @@ async function Licences() {
       />
     );
   }
-  const sorted = [...licenses].sort((a, b) => b.season.localeCompare(a.season));
+  const sorted = [...licenses].sort((a, b) => b.season.localeCompare(a.season) || a.discipline.localeCompare(b.discipline));
   return (
     <div className="max-w-3xl">
       <Table>
@@ -30,6 +31,7 @@ async function Licences() {
         <thead>
           <tr>
             <Th>Saison</Th>
+            <Th>Discipline</Th>
             <Th>Numéro de licence</Th>
             <Th>Mise à jour</Th>
             <Th>
@@ -41,6 +43,7 @@ async function Licences() {
           {sorted.map((license) => (
             <tr key={license.id}>
               <Td className="font-medium whitespace-nowrap">{license.season.replace("-", " / ")}</Td>
+              <Td>{DISCIPLINE_LABELS[license.discipline]}</Td>
               <Td className="font-mono">{license.number}</Td>
               <Td className="whitespace-nowrap">{formatShortDate(license.updatedAt)}</Td>
               <Td>
@@ -50,7 +53,7 @@ async function Licences() {
                       href={`/api/licenses/${license.id}/file`}
                       download
                       className="text-sm font-medium whitespace-nowrap text-accent hover:underline"
-                      aria-label={`Télécharger la licence ${license.season}`}
+                      aria-label={`Télécharger la licence ${DISCIPLINE_LABELS[license.discipline]} ${license.season}`}
                     >
                       Télécharger
                     </a>
@@ -70,7 +73,7 @@ async function Licences() {
 export default function LicencesPage() {
   return (
     <div className="flex flex-col">
-      <PageHeader title="Mes licences" description="Vos licences FFJDA, saison par saison, déposées par le dojo." />
+      <PageHeader title="Mes licences" description="Vos licences FFJDA, saison par saison et par discipline, déposées par le dojo." />
       <Suspense fallback={<PageFallback />}>
         <Licences />
       </Suspense>

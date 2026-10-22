@@ -1,7 +1,7 @@
 import { parisToday } from "@/lib/trial";
 import type { BadgeTone } from "@/components/ui/badge";
 import type { ApiResult } from "./client-api";
-import type { DocumentCategory, Placement } from "./types";
+import type { Discipline, DocumentCategory, Placement } from "./types";
 
 /* Same limits as the API (docs/documents.md). The API checks the magic bytes again. */
 export const DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
@@ -69,6 +69,13 @@ export function certificateState(certificate: { validUntil: string | null } | nu
   if (isExpired(certificate.validUntil)) return { label: "Expiré", tone: "danger" };
   return { label: `Valide jusqu'au ${formatCalendarDate(certificate.validUntil)}`, tone: "success" };
 }
+
+export const DISCIPLINE_LABELS: Record<Discipline, string> = {
+  KENDO: "Kendo",
+  IAIDO: "Iaido",
+  JODO: "Jodo",
+  BATTODO: "Battodo",
+};
 
 /* FFJDA seasons run September to August. */
 export function currentSeason(): string {

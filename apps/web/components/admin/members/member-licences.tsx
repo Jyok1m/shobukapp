@@ -9,11 +9,12 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
+import { Select } from "@/components/ui/select";
 import { Table, Td, Th } from "@/components/ui/table";
 import { apiRequest } from "@/lib/client-api";
-import { checkDocumentFile, currentSeason, documentUploadError } from "@/lib/documents";
+import { DISCIPLINE_LABELS, checkDocumentFile, currentSeason, documentUploadError } from "@/lib/documents";
 import { formatShortDate } from "@/lib/format";
-import type { License } from "@/lib/types";
+import type { Discipline, License } from "@/lib/types";
 
 type Errors = Partial<Record<"season" | "number" | "file", string>>;
 
@@ -23,7 +24,7 @@ function seasonError(season: string): string | undefined {
   return undefined;
 }
 
-/* POST /admin/licenses upserts on member and season: the same season replaces the number and the file. */
+/* POST /admin/licenses upserts on member, season and discipline: the number is shared by the whole season, the file is per discipline. */
 export function MemberLicences({ memberId, licenses }: { memberId: string; licenses: License[] }) {
   const router = useRouter();
   const [errors, setErrors] = useState<Errors>({});
@@ -35,12 +36,13 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
   const [deletePending, setDeletePending] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const sorted = [...licenses].sort((a, b) => b.season.localeCompare(a.season));
+  const sorted = [...licenses].sort((a, b) => b.season.localeCompare(a.season) || a.discipline.localeCompare(b.discipline));
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const season = String(data.get("season") ?? "").trim();
+    const discipline = String(data.get("discipline") ?? "") as Discipline;
     const number = String(data.get("number") ?? "").trim();
     const file = data.get("file");
     const hasFile = file instanceof File && file.size > 0;
@@ -57,15 +59,17 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
     const body = new FormData();
     body.append("userId", memberId);
     body.append("season", season);
+    body.append("discipline", discipline);
     body.append("number", number);
     if (hasFile) body.append("file", file);
-    const replacing = licenses.some((license) => license.season === season);
+    const replacing = licenses.some((license) => license.season === season && license.discipline === discipline);
+    const label = `${DISCIPLINE_LABELS[discipline]} ${season}`;
 
     setPending(true);
     const result = await apiRequest<License>("POST", "/admin/licenses", body);
     setPending(false);
     if (!result.ok) return setError(documentUploadError(result));
-    setSaved(replacing ? `Licence ${season} mise à jour.` : `Licence ${season} ajoutée.`);
+    setSaved(replacing ? `Licence ${label} mise à jour.` : `Licence ${label} ajoutée.`);
     setFormKey((key) => key + 1);
     router.refresh();
   }
@@ -84,7 +88,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
   return (
     <Card
       title="Licences FFJDA"
-      description="Une licence par saison. Enregistrer une saison existante remplace son numéro, et son fichier si vous en joignez un."
+      description="Un numéro par saison, un fichier par discipline. Changer le numéro d'une saison le change pour toutes ses disciplines."
     >
       <div className="flex flex-col gap-6">
         {sorted.length === 0 ? (
@@ -95,6 +99,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
             <thead>
               <tr>
                 <Th>Saison</Th>
+                <Th>Discipline</Th>
                 <Th>Numéro</Th>
                 <Th>Mise à jour</Th>
                 <Th>
@@ -106,6 +111,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
               {sorted.map((license) => (
                 <tr key={license.id}>
                   <Td className="font-medium whitespace-nowrap">{license.season}</Td>
+                  <Td>{DISCIPLINE_LABELS[license.discipline]}</Td>
                   <Td className="font-mono">{license.number}</Td>
                   <Td className="whitespace-nowrap">{formatShortDate(license.updatedAt)}</Td>
                   <Td>
@@ -115,7 +121,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
                           href={`/api/licenses/${license.id}/file`}
                           download
                           className="inline-flex min-h-10 sm:min-h-8 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-accent hover:bg-ink/5"
-                          aria-label={`Télécharger la licence ${license.season}`}
+                          aria-label={`Télécharger la licence ${DISCIPLINE_LABELS[license.discipline]} ${license.season}`}
                         >
                           Télécharger
                         </a>
@@ -129,7 +135,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
                           setDeleteError(null);
                           setDeleting(license);
                         }}
-                        aria-label={`Supprimer la licence ${license.season}`}
+                        aria-label={`Supprimer la licence ${DISCIPLINE_LABELS[license.discipline]} ${license.season}`}
                       >
                         Supprimer
                       </Button>
@@ -146,6 +152,17 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="license-season" label="Saison" hint="De septembre à août, par exemple 2026-2027." error={errors.season}>
               {(control) => <Input {...control} name="season" defaultValue={currentSeason()} maxLength={9} inputMode="numeric" />}
+            </Field>
+            <Field id="license-discipline" label="Discipline">
+              {(control) => (
+                <Select {...control} name="discipline" defaultValue="KENDO">
+                  {Object.entries(DISCIPLINE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </Field>
             <Field id="license-number" label="Numéro de licence" error={errors.number}>
               {(control) => <Input {...control} name="number" maxLength={40} autoComplete="off" />}
@@ -180,8 +197,8 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
 
       <ConfirmDialog
         open={deleting !== null}
-        title={deleting ? `Supprimer la licence ${deleting.season} ?` : "Supprimer la licence ?"}
-        description="Le numéro et le fichier de cette saison seront définitivement supprimés."
+        title={deleting ? `Supprimer la licence ${DISCIPLINE_LABELS[deleting.discipline]} ${deleting.season} ?` : "Supprimer la licence ?"}
+        description="Cette discipline et son fichier seront définitivement supprimés pour la saison."
         confirmLabel="Supprimer"
         pending={deletePending}
         error={deleteError}

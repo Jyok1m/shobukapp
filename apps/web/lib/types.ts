@@ -241,10 +241,14 @@ export type DocumentBoard = {
 /* POST /billing/subscription/frequency/preview */
 export type FrequencyPreview = { amountDueCents: number; creditCents: number; currency: string };
 
+export type Discipline = "KENDO" | "IAIDO" | "JODO" | "BATTODO";
+
+/* One row per member, season and discipline: the number is the season's, only the file differs. */
 export type License = {
   id: string;
   userId: string;
   season: string;
+  discipline: Discipline;
   number: string;
   hasFile: boolean;
   createdAt: string;
