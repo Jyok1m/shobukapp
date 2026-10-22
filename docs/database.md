@@ -58,8 +58,10 @@ payment_reminders id, user_id, sent_by_id, channel (EMAIL), note, created_at
 documents        id, owner_id (nullable: null means a dojo document), category
                  (MEDICAL_CERTIFICATE|LEGAL|ACCOUNTING|OTHER), title, storage_key,
                  mime_type, size_bytes, valid_until (nullable), uploaded_by_id
-licenses         id, user_id, season ("2026-2027"), number, storage_key, uploaded_by_id,
-                 unique (user_id, season)
+licenses         id, user_id, season ("2026-2027"), discipline (KENDO|IAIDO|JODO|BATTODO),
+                 number, storage_key, uploaded_by_id, unique (user_id, season, discipline)
+license_requests id, user_id, season, discipline, status (PENDING|SENT|DONE), note,
+                 requested_by_id, sent_at, done_at, unique (user_id, season, discipline)
 messages         id, sender_id, recipient_id, body, read_at, created_at
 products         id, slug (unique), name, description, kind (FEDERATION|MISC), amount_cents, currency,
                  member_purchasable, per_season, stripe_test/live_product_id, stripe_test/live_price_id,

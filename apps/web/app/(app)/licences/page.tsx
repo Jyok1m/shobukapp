@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { LicenseFileActions } from "@/components/documents/license-viewer";
 import { PageFallback } from "@/components/page-fallback";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -47,16 +48,9 @@ async function Licences() {
               <Td className="font-mono">{license.number}</Td>
               <Td className="whitespace-nowrap">{formatShortDate(license.updatedAt)}</Td>
               <Td>
-                <div className="flex justify-end">
+                <div className="flex items-center justify-end gap-2">
                   {license.hasFile ? (
-                    <a
-                      href={`/api/licenses/${license.id}/file`}
-                      download
-                      className="text-sm font-medium whitespace-nowrap text-accent hover:underline"
-                      aria-label={`Télécharger la licence ${DISCIPLINE_LABELS[license.discipline]} ${license.season}`}
-                    >
-                      Télécharger
-                    </a>
+                    <LicenseFileActions license={license} />
                   ) : (
                     <span className="text-sm text-muted">Fichier non déposé</span>
                   )}

@@ -221,9 +221,8 @@ export class DocumentsService {
     });
     let license: Prisma.LicenseGetPayload<{ select: typeof licenseSelect }>;
     try {
-      // The number belongs to the season: the other disciplines follow it.
-      [license] = await this.prisma.$transaction([
-        this.prisma.license.upsert({
+      license = await this.prisma.$transaction(async (tx) => {
+        const saved = await tx.license.upsert({
           where: unique,
           create: {
             userId: dto.userId,
@@ -239,12 +238,26 @@ export class DocumentsService {
             ...(key && { storageKey: key.key }),
           },
           select: licenseSelect,
-        }),
-        this.prisma.license.updateMany({
+        });
+        // The number belongs to the season: the other disciplines follow it.
+        await tx.license.updateMany({
           where: { userId: dto.userId, season: dto.season },
           data: { number: dto.number },
-        }),
-      ]);
+        });
+        // Only the file proves the licence is in: a renewal keeps last season's number.
+        if (key) {
+          await tx.licenseRequest.updateMany({
+            where: {
+              userId: dto.userId,
+              season: dto.season,
+              discipline: dto.discipline,
+              status: { not: 'DONE' },
+            },
+            data: { status: 'DONE', doneAt: new Date() },
+          });
+        }
+        return saved;
+      });
     } catch (error) {
       if (key) await this.storage.remove(key.key);
       throw error;

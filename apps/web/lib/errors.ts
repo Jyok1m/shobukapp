@@ -45,6 +45,7 @@ export const apiErrorMessages: Record<string, string> = {
   charge_not_pending: "Cette demande n'est plus en attente : le lien ne peut plus être envoyé.",
   charge_paid_online:
     "Payé en ligne : le statut ne peut pas être modifié ici. Un remboursement se fait depuis le tableau de bord Stripe.",
+  license_request_done: "Cette demande est close : la licence a déjà été reçue.",
   invitation_not_found: "Cette invitation n'est plus en attente : elle a déjà été utilisée, révoquée ou a expiré.",
 };
 

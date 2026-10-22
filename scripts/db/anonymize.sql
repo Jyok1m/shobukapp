@@ -57,6 +57,7 @@ UPDATE join_requests SET
 
 UPDATE messages SET body = 'Message anonymisé.';
 UPDATE payment_reminders SET note = NULL;
+UPDATE license_requests SET note = NULL;
 
 -- Files are not copied: downloads answer 404 on dev. Members' rows keep their
 -- dates (useful to test the certificate column) but not the admins': with

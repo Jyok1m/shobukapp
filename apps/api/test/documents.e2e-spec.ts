@@ -258,6 +258,30 @@ describe('Documents and licences (e2e)', () => {
       .get(`/licenses/${id}/file`)
       .set('Cookie', other.cookie)
       .expect(404);
+
+    for (const viewer of [member, admin]) {
+      const view = await request(server)
+        .get(`/licenses/${id}/view`)
+        .set('Cookie', viewer.cookie)
+        .expect(200)
+        .expect('Content-Type', 'application/pdf');
+      expect(view.get('Content-Disposition')).toBe(
+        'inline; filename="licence-ffjda-2026-2027-kendo.pdf"',
+      );
+      expect(view.get('X-Content-Type-Options')).toBe('nosniff');
+      expect(view.get('Cache-Control')).toBe('private, no-store');
+      expect(view.get('Content-Security-Policy')).toBe(
+        "frame-ancestors 'self'",
+      );
+    }
+    await request(server)
+      .get(`/licenses/${id}/view`)
+      .set('Cookie', other.cookie)
+      .expect(404);
+    await request(server)
+      .get('/licenses/00000000-0000-4000-8000-000000000000/view')
+      .set('Cookie', member.cookie)
+      .expect(404);
   });
 });
 

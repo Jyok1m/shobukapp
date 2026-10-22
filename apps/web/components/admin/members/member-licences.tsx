@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { FormAlert } from "@/components/auth/form-alert";
+import { LicenseFileActions } from "@/components/documents/license-viewer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -12,17 +13,11 @@ import { Notice } from "@/components/ui/notice";
 import { Select } from "@/components/ui/select";
 import { Table, Td, Th } from "@/components/ui/table";
 import { apiRequest } from "@/lib/client-api";
-import { DISCIPLINE_LABELS, checkDocumentFile, currentSeason, documentUploadError } from "@/lib/documents";
+import { DISCIPLINE_LABELS, checkDocumentFile, currentSeason, documentUploadError, seasonError } from "@/lib/documents";
 import { formatShortDate } from "@/lib/format";
 import type { Discipline, License } from "@/lib/types";
 
 type Errors = Partial<Record<"season" | "number" | "file", string>>;
-
-function seasonError(season: string): string | undefined {
-  const match = /^(\d{4})-(\d{4})$/.exec(season);
-  if (!match || Number(match[2]) !== Number(match[1]) + 1) return "Format attendu : 2026-2027.";
-  return undefined;
-}
 
 /* POST /admin/licenses upserts on member, season and discipline: the number is shared by the whole season, the file is per discipline. */
 export function MemberLicences({ memberId, licenses }: { memberId: string; licenses: License[] }) {
@@ -117,14 +112,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
                   <Td>
                     <div className="flex items-center justify-end gap-2">
                       {license.hasFile ? (
-                        <a
-                          href={`/api/licenses/${license.id}/file`}
-                          download
-                          className="inline-flex min-h-10 sm:min-h-8 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-accent hover:bg-ink/5"
-                          aria-label={`Télécharger la licence ${DISCIPLINE_LABELS[license.discipline]} ${license.season}`}
-                        >
-                          Télécharger
-                        </a>
+                        <LicenseFileActions license={license} />
                       ) : (
                         <span className="px-3 text-sm whitespace-nowrap text-muted">Sans fichier</span>
                       )}

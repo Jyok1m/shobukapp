@@ -10,6 +10,7 @@ import { BillingModule } from './billing/billing.module';
 import { AppThrottlerGuard } from './common/throttler.guard';
 import { RolesGuard, SessionGuard } from './auth/guards';
 import { DocumentsModule } from './documents/documents.module';
+import { LicenseRequestsModule } from './license-requests/license-requests.module';
 import { MailModule } from './mail/mail.module';
 import { MessagesModule } from './messages/messages.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
@@ -32,6 +33,7 @@ import { UsersModule } from './users/users.module';
     BillingModule,
     AdminMembersModule,
     DocumentsModule,
+    LicenseRequestsModule,
     MessagesModule,
     OnboardingModule,
   ],

@@ -19,7 +19,7 @@ export function DocumentPlacementDialog({
   onSaved: () => void;
 }) {
   return (
-    <Dialog open={document !== null} title="Affichage du document" onClose={onClose} className="max-w-lg">
+    <Dialog open={document !== null} title="Affichage du document" onClose={onClose} size="lg">
       {document && <PlacementForm key={document.id} document={document} onClose={onClose} onSaved={onSaved} />}
     </Dialog>
   );

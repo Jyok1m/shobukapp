@@ -16,6 +16,7 @@ export const adminNav: NavItem[] = [
   { href: "/admin/formules", label: "Formules de cotisation" },
   { href: "/admin/produits", label: "Produits" },
   { href: "/admin/membres", label: "Membres" },
+  { href: "/admin/licences", label: "Licences" },
   { href: "/admin/invitations", label: "Invitations" },
   { href: "/admin/documents", label: "Documents du dojo" },
 ];

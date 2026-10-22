@@ -26,7 +26,8 @@ One Nest module per area, each owning its controller, service and DTOs:
 | `UsersModule` | `/me`, `/members`, `/admin/members` | `members.md` |
 | `BillingModule` | `/billing`, `/admin/plans`, `/admin/payments` | `billing.md` |
 | `DocumentsModule` | `/documents`, `/admin/documents` | `documents.md` |
-| `LicensesModule` | `/licenses`, `/admin/licenses` | `documents.md` |
+| `DocumentsModule` (licences) | `/licenses`, `/admin/licenses` | `documents.md` |
+| `LicenseRequestsModule` | `/admin/license-requests` | `documents.md` |
 | `MessagesModule` | `/messages` | `messaging.md` |
 | `StorageModule` | none (service only) | `documents.md` |
 | `MailModule` | none (service only) | `billing.md` |

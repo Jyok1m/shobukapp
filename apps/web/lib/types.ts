@@ -255,6 +255,31 @@ export type License = {
   updatedAt: string;
 };
 
+/* FFJDA licence requests, passed by hand on the FFJDA extranet (GET /admin/license-requests). */
+export type LicenseRequestStatus = "PENDING" | "SENT" | "DONE";
+export type LicenseRequestMissingField = "birthDate" | "sex" | "nationality" | "address";
+
+export type LicenseRequest = {
+  id: string;
+  userId: string;
+  season: string;
+  discipline: Discipline;
+  status: LicenseRequestStatus;
+  note: string | null;
+  sentAt: string | null;
+  doneAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  member: { id: string; firstName: string; lastName: string; email: string };
+  /* Profile fields the FFJDA form needs and the member has not filled. */
+  missingFields: LicenseRequestMissingField[];
+};
+
+export type LicenseRequestsPage = { items: LicenseRequest[]; nextCursor: string | null };
+
+/* POST /admin/license-requests. Skipped: a request or a licence already exists for that discipline and season. */
+export type LicenseRequestsCreated = { created: LicenseRequest[]; skipped: Discipline[] };
+
 export type Message = {
   id: string;
   senderId: string;

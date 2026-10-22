@@ -82,3 +82,10 @@ export function currentSeason(): string {
   const [year, month] = todayInParis().split("-").map(Number);
   return month >= 9 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
 }
+
+/* "2026-2027": two consecutive years. */
+export function seasonError(season: string): string | undefined {
+  const match = /^(\d{4})-(\d{4})$/.exec(season);
+  if (!match || Number(match[2]) !== Number(match[1]) + 1) return "Format attendu : 2026-2027.";
+  return undefined;
+}

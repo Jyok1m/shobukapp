@@ -27,7 +27,16 @@
 ## FFJDA licences
 
 - One row per user, season and discipline (`unique(user_id, season, discipline)`), uploaded by an admin with the licence number and the PDF. Disciplines: `KENDO`, `IAIDO`, `JODO`, `BATTODO`. The FFJDA number is the same for every discipline of a season, only the file differs: saving a number updates every row of that member and season. Licences from before the discipline column were backfilled as `KENDO`.
-- `GET /licenses` for the member, `GET /licenses/:id/file`; `GET /admin/licenses?userId=`, `POST /admin/licenses` (multipart: userId, season `YYYY-YYYY`, discipline, number, optional file: upsert on user, season and discipline), `DELETE /admin/licenses/:id` for admins. Licence mime types are sniffed on read, the table has no mime column.
+- `GET /licenses` for the member, `GET /licenses/:id/file` (attachment) and `GET /licenses/:id/view` (same check, `inline` disposition and `frame-ancestors 'self'` plus `X-Frame-Options: SAMEORIGIN`, shown in an iframe by "Voir"); `GET /admin/licenses?userId=`, `POST /admin/licenses` (multipart: userId, season `YYYY-YYYY`, discipline, number, optional file: upsert on user, season and discipline), `DELETE /admin/licenses/:id` for admins. Licence mime types are sniffed on read, the table has no mime column.
 - Re-uploading for the same season and discipline replaces the file (the old one is removed) and keeps the row.
 - Download filenames are built from the title, ASCII only, with an extension derived from the sniffed type: an uploaded filename is never reused.
-- The legal information needed to request a licence comes from the profile (`members.md`). Generating the FFJDA request automatically is out of scope.
+- The legal information needed to request a licence comes from the profile (`members.md`).
+
+## Licence requests
+
+The FFJDA has no API: an admin requests licences by hand on the FFJDA extranet. `license_requests` tracks what is left to do, one row per user, season and discipline (`unique(user_id, season, discipline)`).
+
+- Statuses: `PENDING` (à faire), `SENT` (envoyée à la FFJDA, `sent_at`), `DONE` (licence reçue, `done_at`). `DONE` is never set by hand: uploading the licence file for the same user, season and discipline closes the request in the same transaction. Saving a number alone does not (a renewal keeps last season's number), and a licence without a file does not block a new request.
+- `GET /admin/license-requests?season=&status=&userId=&cursor=&limit=` (cursor pagination, newest first, each item with the member and the profile fields still missing for the FFJDA), `POST /admin/license-requests` (`userId`, `season`, `disciplines[]`, optional `note`: a discipline that already has a request or a licence for the season is skipped and reported), `PATCH /admin/license-requests/:id` (`PENDING` or `SENT`, note; 409 `license_request_done` on a closed one), `DELETE /admin/license-requests/:id`. Admins only.
+- `GET /admin/license-requests/export?season=&status=`: CSV with the identity and licence fields to type on the extranet (same format as the members export), plus the season's number or, for a renewal, the latest earlier one. Never the emergency contact, never medical data.
+- Submitting the request to the FFJDA automatically is out of scope: without an API it would mean scripting the extranet with the club's credentials.

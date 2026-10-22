@@ -51,6 +51,20 @@ enum Discipline {
   BATTODO
 }
 
+// An FFJDA licence request typed by hand on the federation's extranet.
+// DONE is only set when the licence itself is uploaded (docs/documents.md).
+enum LicenseRequestStatus {
+  PENDING
+  SENT
+  DONE
+}
+
+// What a row of member_exports journals: each export of personal data.
+enum ExportKind {
+  MEMBERS
+  LICENSE_REQUESTS
+}
+
 // Where a dojo document shows on the members' dashboard. PRIVATE: admins only.
 enum DocumentPlacement {
   PRIVATE
@@ -131,6 +145,8 @@ model User {
   documentsUploaded   Document[]        @relation("DocumentUploader")
   licenses            License[]         @relation("LicenseOwner")
   licensesUploaded    License[]         @relation("LicenseUploader")
+  licenseRequests     LicenseRequest[]  @relation("LicenseRequestMember")
+  licenseRequestsMade LicenseRequest[]  @relation("LicenseRequestAuthor")
   messagesSent        Message[]         @relation("MessageSender")
   messagesReceived    Message[]         @relation("MessageRecipient")
   exports             MemberExport[]
@@ -291,22 +307,43 @@ model Document {
 }
 
 model License {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @map("user_id") @db.Uuid
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @map("user_id") @db.Uuid
   season       String
   // One FFJDA number per member and season, shared by every discipline row.
   discipline   Discipline
   number       String
-  storageKey   String?  @unique @map("storage_key")
-  uploadedById String?  @map("uploaded_by_id") @db.Uuid
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  storageKey   String?    @unique @map("storage_key")
+  uploadedById String?    @map("uploaded_by_id") @db.Uuid
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
 
   user       User  @relation("LicenseOwner", fields: [userId], references: [id], onDelete: Cascade)
   uploadedBy User? @relation("LicenseUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@unique([userId, season, discipline])
   @@map("licenses")
+}
+
+model LicenseRequest {
+  id            String               @id @default(uuid()) @db.Uuid
+  userId        String               @map("user_id") @db.Uuid
+  season        String
+  discipline    Discipline
+  status        LicenseRequestStatus @default(PENDING)
+  note          String?
+  requestedById String?              @map("requested_by_id") @db.Uuid
+  sentAt        DateTime?            @map("sent_at")
+  doneAt        DateTime?            @map("done_at")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  user        User  @relation("LicenseRequestMember", fields: [userId], references: [id], onDelete: Cascade)
+  requestedBy User? @relation("LicenseRequestAuthor", fields: [requestedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, season, discipline])
+  @@index([status, season])
+  @@map("license_requests")
 }
 
 model Message {
@@ -326,10 +363,11 @@ model Message {
 }
 
 model MemberExport {
-  id           String   @id @default(uuid()) @db.Uuid
-  exportedById String?  @map("exported_by_id") @db.Uuid
-  rowCount     Int      @map("row_count")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id           String     @id @default(uuid()) @db.Uuid
+  exportedById String?    @map("exported_by_id") @db.Uuid
+  kind         ExportKind @default(MEMBERS)
+  rowCount     Int        @map("row_count")
+  createdAt    DateTime   @default(now()) @map("created_at")
 
   exportedBy User? @relation(fields: [exportedById], references: [id], onDelete: SetNull)
 

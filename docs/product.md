@@ -24,7 +24,7 @@ Open question: if the dojo needs a third role (for example a board member who se
 - See the directory of members who opted in: name, photo, phone, email ("Annuaire").
 - Send and receive 1:1 messages with other members ("Messagerie").
 - Upload, replace, rename and delete their own documents, first of all the medical certificate ("Mes documents").
-- See their FFJDA licences, one per season, and download the PDF ("Mes licences").
+- See their FFJDA licences, one per season and discipline, view them in the site or download the PDF ("Mes licences").
 - Edit their profile (first name, last name, phone, photo) and the legal information required for the FFJDA licence (birth date, sex, nationality, address, emergency contact) ("Mon profil").
 - Choose whether they appear in the directory.
 
@@ -36,7 +36,8 @@ Open question: if the dojo needs a third role (for example a board member who se
 - List practitioners with their subscription status, last payment and failed payments; open a practitioner's detail ("Pratiquants").
 - Send a payment reminder to a practitioner, logged with its author and date ("Relancer").
 - CRUD on dojo documents: legal (statuts, règlement intérieur, assurance) and accounting (bilans, factures) ("Documents du dojo").
-- Upload FFJDA licences for a practitioner and season.
+- Upload FFJDA licences for a practitioner, season and discipline, and view them in the site.
+- Track licence requests: request a licence for a member, season and disciplines, mark it sent to the FFJDA, export the data to type on the FFJDA extranet; uploading the licence closes the request ("Licences").
 - CRUD on member information, except the password, and export the members list as CSV ("Membres", "Exporter").
 - See (not edit) practitioners' medical certificates and their validity date.
 

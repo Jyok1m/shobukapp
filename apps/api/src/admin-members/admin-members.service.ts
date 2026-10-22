@@ -22,6 +22,7 @@ import { toProfileData } from '../users/users.service';
 import { UpdateProfileDto } from '../users/dto/profile.dto';
 import { chargesOfMode } from '../billing/products/products.service';
 import { currentSeason } from '../billing/products/season';
+import { SEX_LABEL, toCsv } from '../common/csv';
 import { ErasureService } from './erasure.service';
 import {
   CreateMemberDto,
@@ -158,17 +159,6 @@ function toListItem(row: ListRow) {
     ),
   };
 }
-
-// A cell starting with these is run as a formula by spreadsheet software.
-function csvCell(value: string | number | Date | null | undefined): string {
-  if (value === null || value === undefined) return '';
-  let text =
-    value instanceof Date ? value.toISOString().slice(0, 10) : String(value);
-  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return /[";\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-const SEX_LABEL = { FEMALE: 'F', MALE: 'M' } as const;
 
 @Injectable()
 export class AdminMembersService {
@@ -381,7 +371,7 @@ export class AdminMembersService {
       'Numéro de licence',
       'Inscrit le',
     ];
-    const lines = users.map((u) => {
+    const rows = users.map((u) => {
       const sub = pickCurrent(u.subscriptions);
       const license = u.licenses[0];
       return [
@@ -404,16 +394,13 @@ export class AdminMembersService {
         license?.season,
         license?.number,
         u.createdAt,
-      ]
-        .map(csvCell)
-        .join(';');
+      ];
     });
 
     await this.prisma.memberExport.create({
-      data: { exportedById: adminId, rowCount: users.length },
+      data: { exportedById: adminId, kind: 'MEMBERS', rowCount: users.length },
     });
-    // BOM: Excel reads accents correctly; CRLF and semicolons for French Excel.
-    return '﻿' + [header.map(csvCell).join(';'), ...lines].join('\r\n');
+    return toCsv(header, rows);
   }
 
   /*

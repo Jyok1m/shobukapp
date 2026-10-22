@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { MemberCharges } from "@/components/admin/members/member-charges";
 import { DeleteMemberZone } from "@/components/admin/members/delete-member-zone";
+import { MemberLicenseRequests } from "@/components/admin/members/member-license-requests";
 import { MemberLicences } from "@/components/admin/members/member-licences";
 import { MemberRole } from "@/components/admin/members/member-role";
 import { MemberReminders } from "@/components/admin/members/member-reminders";
@@ -18,8 +19,9 @@ import { Badge } from "@/components/ui/badge";
 import { Notice } from "@/components/ui/notice";
 import { apiFetch, apiGet } from "@/lib/api";
 import { cotisationLabel, formatDate } from "@/lib/format";
+import { licenseRequestsPath } from "@/lib/license-requests";
 import { requireUser } from "@/lib/session";
-import type { AdminMemberDetail, AdminProduct, Charge, License, MemberDocument } from "@/lib/types";
+import type { AdminMemberDetail, AdminProduct, Charge, License, LicenseRequestsPage, MemberDocument } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Fiche membre" };
 
@@ -59,9 +61,10 @@ async function MemberDetail({ params, searchParams }: { params: Promise<{ id: st
   const admin = await requireUser("ADMIN");
   const { id } = await params;
   const member = await loadMember(id);
-  const [documents, licenses, charges, products] = await Promise.all([
+  const [documents, licenses, licenseRequests, charges, products] = await Promise.all([
     apiGet<MemberDocument[]>(`/admin/documents/members/${member.id}`),
     apiGet<License[]>(`/admin/licenses?userId=${member.id}`),
+    apiGet<LicenseRequestsPage>(licenseRequestsPath({ userId: member.id, limit: 100 })),
     apiGet<Charge[]>(`/admin/members/${member.id}/charges`),
     apiGet<AdminProduct[]>("/admin/products"),
   ]);
@@ -134,6 +137,10 @@ async function MemberDetail({ params, searchParams }: { params: Promise<{ id: st
 
       <div className="max-w-3xl">
         <MemberCharges memberId={member.id} charges={charges} products={products} />
+      </div>
+
+      <div className="max-w-3xl">
+        <MemberLicenseRequests memberId={member.id} requests={licenseRequests.items} />
       </div>
 
       <div className="max-w-3xl">

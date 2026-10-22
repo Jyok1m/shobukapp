@@ -3,6 +3,15 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { cx } from "@/lib/cx";
 
+export type DialogSize = "md" | "lg" | "xl" | "4xl";
+
+const sizes: Record<DialogSize, string> = {
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+  "4xl": "max-w-4xl",
+};
+
 type DialogProps = {
   open: boolean;
   title: ReactNode;
@@ -10,6 +19,8 @@ type DialogProps = {
   /* False while an action runs: Escape and the backdrop then do nothing. */
   dismissible?: boolean;
   onClose: () => void;
+  /* Width: a class passed through className cannot override the default, Tailwind orders same-property utilities itself. */
+  size?: DialogSize;
   className?: string;
   children: ReactNode;
 };
@@ -18,7 +29,7 @@ type DialogProps = {
  * Native <dialog> opened as modal: focus trap, Escape and inert background come
  * from the browser. Escape and a click on the backdrop call onClose.
  */
-export function Dialog({ open, title, description, dismissible = true, onClose, className, children }: DialogProps) {
+export function Dialog({ open, title, description, dismissible = true, onClose, size = "md", className, children }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
@@ -43,7 +54,8 @@ export function Dialog({ open, title, description, dismissible = true, onClose, 
         if (event.target === event.currentTarget && dismissible) onClose();
       }}
       className={cx(
-        "m-auto max-h-11/12 w-11/12 max-w-md overflow-y-auto rounded-lg border border-line bg-surface p-0 text-ink shadow-sm backdrop:bg-scrim",
+        "m-auto max-h-11/12 w-11/12 overflow-y-auto rounded-lg border border-line bg-surface p-0 text-ink shadow-sm backdrop:bg-scrim",
+        sizes[size],
         className,
       )}
     >

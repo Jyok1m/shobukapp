@@ -21,7 +21,7 @@ export function PlanEditDialog({ plan, onClose, onSaved }: PlanEditDialogProps) 
       open={plan !== null}
       title={plan ? `Modifier « ${plan.name} »` : "Modifier la formule"}
       onClose={onClose}
-      className="max-w-xl"
+      size="xl"
     >
       {/* Keyed on the plan: the form state starts fresh for each plan opened. */}
       {plan && <PlanEditForm key={plan.id} plan={plan} onClose={onClose} onSaved={onSaved} />}

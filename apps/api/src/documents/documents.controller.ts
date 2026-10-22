@@ -35,12 +35,24 @@ const upload = FileInterceptor('file', {
   limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
 });
 
-function download(res: Response, file: DownloadableFile): StreamableFile {
+/*
+ * Inline is only offered for licences, whose stored types (PDF, JPEG, PNG,
+ * WebP) are never scriptable; frame-ancestors keeps them out of foreign frames.
+ */
+function download(
+  res: Response,
+  file: DownloadableFile,
+  disposition: 'attachment' | 'inline' = 'attachment',
+): StreamableFile {
   res.set({
     'Content-Type': file.mimeType,
-    'Content-Disposition': `attachment; filename="${file.filename}"`,
+    'Content-Disposition': `${disposition}; filename="${file.filename}"`,
     'X-Content-Type-Options': 'nosniff',
     'Cache-Control': 'private, no-store',
+    ...(disposition === 'inline' && {
+      'Content-Security-Policy': "frame-ancestors 'self'",
+      'X-Frame-Options': 'SAMEORIGIN',
+    }),
   });
   return new StreamableFile(file.stream);
 }
@@ -141,6 +153,15 @@ export class LicensesController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
     return download(res, await this.documents.licenseFile(user, id));
+  }
+
+  @Get(':id/view')
+  async view(
+    @CurrentUser() user: SelfUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    return download(res, await this.documents.licenseFile(user, id), 'inline');
   }
 }
 
