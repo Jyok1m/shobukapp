@@ -28,6 +28,7 @@ import {
   CreateMemberDto,
   ListMembersQuery,
   MembershipFilter,
+  TemporaryPasswordDto,
 } from './dto/admin-members.dto';
 
 const PAGE_SIZE = 50;
@@ -532,6 +533,43 @@ export class AdminMembersService {
       })
       .catch(() => 'failed' as const);
     return { user, delivery };
+  }
+
+  /*
+   * Temporary password (docs/members.md): the acting admin re-enters their own
+   * password and cannot target themself. The member is signed out, must choose
+   * their own at the next login, and is told by mail, without the password.
+   */
+  async setTemporaryPassword(
+    admin: SelfUser,
+    id: string,
+    dto: TemporaryPasswordDto,
+  ): Promise<void> {
+    await this.auth.confirmPassword(admin.id, dto.password);
+    if (admin.id === id) {
+      throw new BadRequestException({ code: 'cannot_reset_own_password' });
+    }
+    const target = await this.prisma.user.findUnique({
+      where: { id },
+      select: { email: true, firstName: true },
+    });
+    if (!target) throw new NotFoundException({ code: 'member_not_found' });
+    await this.auth.setTemporaryPassword(id, dto.temporaryPassword);
+    await this.mail
+      .send({
+        to: target.email,
+        subject: 'Shobukan Dojo : mot de passe provisoire',
+        text: [
+          `Bonjour ${target.firstName},`,
+          '',
+          `${admin.firstName} ${admin.lastName} vous a attribué un mot de passe provisoire, qui vous sera remis par le bureau. Vos appareils ont été déconnectés.`,
+          `Connectez-vous sur ${this.webUrl}/connexion avec ce mot de passe : vous choisirez aussitôt le vôtre.`,
+          "Si vous n'étiez pas au courant, prévenez le bureau.",
+          '',
+          'Le bureau du Shobukan Dojo',
+        ].join('\n'),
+      })
+      .catch(() => undefined);
   }
 
   private async assertExists(id: string): Promise<void> {

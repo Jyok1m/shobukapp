@@ -85,3 +85,15 @@ export class ChangeRoleDto {
   @MaxLength(128)
   password!: string;
 }
+
+export class TemporaryPasswordDto {
+  @IsString()
+  @MinLength(10)
+  @MaxLength(128)
+  temporaryPassword!: string;
+
+  // The acting admin's own password, re-entered.
+  @IsString()
+  @MaxLength(128)
+  password!: string;
+}

@@ -3,27 +3,46 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { hash, verify } from 'argon2';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { selfUserSelect, SelfUser } from '../common/self-user';
-import { ChangePasswordDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import { MailService } from '../mail/mail.service';
 import {
+  ChangePasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
+import {
+  generateLinkToken,
   hashSecret,
   invitationStatus,
   normalizeCode,
 } from '../onboarding/invitation-codes';
+
+const RESET_TTL_MS = 60 * 60 * 1000;
 
 // The only service allowed to select password_hash (docs/auth.md).
 @Injectable()
 export class AuthService implements OnModuleInit {
   // Verified against when the email is unknown, so both failures take as long.
   private dummyHash = '';
+  private readonly logger = new Logger(AuthService.name);
+  private readonly webUrl: string;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+    config: ConfigService,
+  ) {
+    this.webUrl = config.getOrThrow<string>('webUrl');
+  }
 
   async onModuleInit() {
     this.dummyHash = await hash('dummy-password-for-timing');
@@ -173,5 +192,133 @@ export class AuthService implements OnModuleInit {
         ...(!termsAcceptedAt && { termsAcceptedAt: new Date() }),
       },
     });
+  }
+
+  /*
+   * "Mot de passe oublié" (docs/auth.md, Password reset). Answers the same way
+   * whether the address has an account or not, and does not wait for the
+   * mail, the slow part. A new link replaces the previous ones.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, firstName: true },
+    });
+    if (!user) return;
+    const token = generateLinkToken();
+    await this.prisma.$transaction([
+      this.prisma.passwordReset.deleteMany({ where: { userId: user.id } }),
+      this.prisma.passwordReset.create({
+        data: {
+          userId: user.id,
+          tokenHash: hashSecret(token),
+          expiresAt: new Date(Date.now() + RESET_TTL_MS),
+        },
+      }),
+    ]);
+    void this.mail
+      .send({
+        to: email,
+        subject: 'Shobukan Dojo : réinitialisation de votre mot de passe',
+        text: [
+          `Bonjour ${user.firstName},`,
+          '',
+          'Vous avez demandé à réinitialiser le mot de passe de votre espace pratiquant. Pour en choisir un nouveau, ouvrez ce lien (valable une heure, utilisable une seule fois) :',
+          `${this.webUrl}/mot-de-passe-oublie/nouveau?token=${token}`,
+          '',
+          "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe actuel reste valable.",
+          '',
+          'Le bureau du Shobukan Dojo',
+        ].join('\n'),
+      })
+      .catch(() => this.logger.warn('password reset mail not delivered'));
+  }
+
+  /*
+   * Claimed atomically like an invitation. Every other session is closed, a
+   * temporary password set by an admin is cleared, and an account that never
+   * accepted the terms accepts them here.
+   */
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    const invalid = () =>
+      new BadRequestException({ code: 'invalid_reset_token' });
+    const reset = await this.prisma.passwordReset.findUnique({
+      where: { tokenHash: hashSecret(dto.token) },
+      select: {
+        id: true,
+        usedAt: true,
+        expiresAt: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            termsAcceptedAt: true,
+          },
+        },
+      },
+    });
+    if (!reset || reset.usedAt || reset.expiresAt.getTime() <= Date.now()) {
+      throw invalid();
+    }
+    const { user } = reset;
+    if (!user.termsAcceptedAt && dto.acceptTerms !== true) {
+      throw new BadRequestException({ code: 'terms_required' });
+    }
+    const passwordHash = await hash(dto.newPassword);
+    await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.passwordReset.updateMany({
+        where: { id: reset.id, usedAt: null, expiresAt: { gt: new Date() } },
+        data: { usedAt: new Date() },
+      });
+      if (!count) throw invalid();
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          mustChangePassword: false,
+          ...(!user.termsAcceptedAt && { termsAcceptedAt: new Date() }),
+        },
+      });
+      await tx.passwordReset.deleteMany({
+        where: { userId: user.id, id: { not: reset.id } },
+      });
+      await tx.session.deleteMany({ where: { userId: user.id } });
+    });
+    await this.mail
+      .send({
+        to: user.email,
+        subject: 'Shobukan Dojo : votre mot de passe a été modifié',
+        text: [
+          `Bonjour ${user.firstName},`,
+          '',
+          'Le mot de passe de votre espace pratiquant vient d’être modifié et vos appareils ont été déconnectés.',
+          `Vous pouvez vous reconnecter sur ${this.webUrl}/connexion.`,
+          "Si vous n'êtes pas à l'origine de ce changement, prévenez le bureau au plus vite.",
+          '',
+          'Le bureau du Shobukan Dojo',
+        ].join('\n'),
+      })
+      .catch(() => undefined);
+  }
+
+  /*
+   * A temporary password chosen by an admin (docs/members.md, Temporary
+   * password). The member is signed out everywhere and must replace it at the
+   * next login; pending reset links stop working.
+   */
+  async setTemporaryPassword(
+    userId: string,
+    temporaryPassword: string,
+  ): Promise<void> {
+    const passwordHash = await hash(temporaryPassword);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash, mustChangePassword: true },
+      }),
+      this.prisma.passwordReset.deleteMany({ where: { userId } }),
+      this.prisma.session.deleteMany({ where: { userId } }),
+    ]);
   }
 }

@@ -79,3 +79,26 @@ export class ChangePasswordDto {
   @IsBoolean()
   acceptTerms?: boolean;
 }
+
+export class ForgotPasswordDto {
+  @Transform(normalizeEmail)
+  @IsEmail()
+  @MaxLength(254)
+  email!: string;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  @Length(43, 43)
+  token!: string;
+
+  @IsString()
+  @MinLength(10)
+  @MaxLength(128)
+  newPassword!: string;
+
+  // Required when the account never accepted them (created by an admin).
+  @IsOptional()
+  @IsBoolean()
+  acceptTerms?: boolean;
+}
