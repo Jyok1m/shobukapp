@@ -21,7 +21,7 @@ async function Gate({ role, children }: { role?: Role; children: ReactNode }) {
   const billingMode = await readBillingMode(user.role);
   // Only what the client shell needs crosses the server/client boundary.
   return (
-    <AppShell user={{ firstName: user.firstName, lastName: user.lastName, role: user.role }} billingMode={billingMode}>
+    <AppShell user={{ id: user.id, firstName: user.firstName, lastName: user.lastName, role: user.role }} billingMode={billingMode}>
       {children}
     </AppShell>
   );

@@ -8,6 +8,7 @@ export const memberNav: NavItem[] = [
   { href: "/messagerie", label: "Messagerie" },
   { href: "/documents", label: "Mes documents" },
   { href: "/licences", label: "Mes licences" },
+  { href: "/aide", label: "Aide" },
 ];
 
 export const adminNav: NavItem[] = [
