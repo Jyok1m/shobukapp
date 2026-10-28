@@ -74,7 +74,7 @@ const memberGuides: Guide[] = [
       <>Ouvrez {link("/profil", "« Mon profil »")}, cadre « Mot de passe ».</>,
       "Tapez votre mot de passe actuel, puis le nouveau deux fois. Il doit compter au moins 10 caractères : une petite phrase facile à retenir convient très bien.",
       "Appuyez sur « Changer le mot de passe ».",
-      `Mot de passe oublié ? Appelez le bureau au ${DOJO.phone}.`,
+      `Mot de passe oublié ? Sur la page de connexion, touchez « Mot de passe oublié ? » : un lien arrive par e-mail. Sans accès à vos e-mails, appelez le bureau au ${DOJO.phone}.`,
     ],
   },
   {
