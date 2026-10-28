@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { FormAlert } from "@/components/auth/form-alert";
 import { Button } from "@/components/ui/button";
-import { Notice } from "@/components/ui/notice";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { cx } from "@/lib/cx";
 import { formatAmount, frequencyAdjectives, frequencyNames, frequencyUnits } from "@/lib/format";
@@ -34,6 +34,7 @@ export function FrequencyChange({
   testMode: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const name = useId();
   const others = prices.filter((price) => price.frequency !== current && price.purchasable);
   const [step, setStep] = useState<Step>("closed");
@@ -41,7 +42,6 @@ export function FrequencyChange({
   const [preview, setPreview] = useState<FrequencyPreview | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
 
   if (others.length === 0) return null;
 
@@ -70,26 +70,16 @@ export function FrequencyChange({
     const result = await apiRequest<Membership>("POST", "/billing/subscription/frequency", { frequency: choice });
     setPending(false);
     if (!result.ok) return setError(frequencyError(result));
-    setDone(`Votre cotisation est maintenant ${frequencyAdjectives[choice]}.`);
+    toast.success(`Votre cotisation est maintenant ${frequencyAdjectives[choice]}`);
     reset();
     router.refresh();
   }
 
   if (step === "closed") {
     return (
-      <div className="flex flex-col gap-3">
-        {done && <Notice tone="success">{done}</Notice>}
-        <Button
-          variant="secondary"
-          className="self-start"
-          onClick={() => {
-            setDone(null);
-            setStep("choose");
-          }}
-        >
-          Changer de fréquence
-        </Button>
-      </div>
+      <Button variant="secondary" className="self-start" onClick={() => setStep("choose")}>
+        Changer de fréquence
+      </Button>
     );
   }
 

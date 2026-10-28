@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Th } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { categoryLabels, certificateState, formatBytes, placementLabels } from "@/lib/documents";
 import { formatShortDate } from "@/lib/format";
@@ -45,6 +46,7 @@ export function DocumentList({
   emptyDescription?: string;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [editing, setEditing] = useState<MemberDocument | null>(null);
   const [placing, setPlacing] = useState<MemberDocument | null>(null);
   const [deleting, setDeleting] = useState<MemberDocument | null>(null);
@@ -58,6 +60,7 @@ export function DocumentList({
     const result = await apiRequest("DELETE", `/documents/${deleting.id}`);
     setPending(false);
     if (!result.ok) return setDeleteError(result.error);
+    toast.success("Document supprimé");
     setDeleting(null);
     router.refresh();
   }
@@ -154,6 +157,7 @@ export function DocumentList({
             document={placing}
             onClose={() => setPlacing(null)}
             onSaved={() => {
+              toast.success("Affichage du document mis à jour");
               setPlacing(null);
               router.refresh();
             }}
@@ -162,6 +166,7 @@ export function DocumentList({
             document={editing}
             onClose={() => setEditing(null)}
             onSaved={() => {
+              toast.success("Document modifié");
               setEditing(null);
               router.refresh();
             }}

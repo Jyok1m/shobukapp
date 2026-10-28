@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Notice } from "@/components/ui/notice";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { formatDate } from "@/lib/format";
 import type { AdminMemberDetail, Role, RoleChange } from "@/lib/types";
@@ -28,11 +28,11 @@ export function MemberRole({
   isSelf: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
   const promote = role === "PRACTITIONER";
   const target: Role = promote ? "ADMIN" : "PRACTITIONER";
 
@@ -45,7 +45,7 @@ export function MemberRole({
     if (!result.ok) return setError(result.error);
     setOpen(false);
     setPassword("");
-    setDone(promote ? `${name} est maintenant administrateur.` : `${name} n'est plus administrateur.`);
+    toast.success(promote ? `${name} est maintenant administrateur` : `${name} n'est plus administrateur`, "Un e-mail l'en a informé.");
     router.refresh();
   }
 
@@ -62,7 +62,6 @@ export function MemberRole({
               onClick={() => {
                 setPassword("");
                 setError(null);
-                setDone(null);
                 setOpen(true);
               }}
             >
@@ -71,7 +70,6 @@ export function MemberRole({
           )}
         </div>
         {isSelf && <p className="text-sm text-muted">Vous ne pouvez pas modifier votre propre rôle.</p>}
-        {done && <Notice tone="success">{done}</Notice>}
 
         <div className="flex flex-col gap-2">
           <h3 className="text-sm font-semibold text-ink">Historique</h3>

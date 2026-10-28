@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Notice } from "@/components/ui/notice";
 import { Select } from "@/components/ui/select";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { categoryLabels, checkDocumentFile, DOCUMENT_ACCEPT, documentUploadError } from "@/lib/documents";
 import type { DocumentCategory, Placement } from "@/lib/types";
@@ -32,12 +32,12 @@ export function DocumentUploadForm({
   withPlacement?: boolean;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [category, setCategory] = useState<DocumentCategory>(categories[0]);
   const [docTitle, setDocTitle] = useState("");
   const [placement, setPlacement] = useState<Placement>("PRIVATE");
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [pending, setPending] = useState(false);
   // Remounts the file input after a successful upload, which clears it.
   const [formKey, setFormKey] = useState(0);
@@ -46,7 +46,6 @@ export function DocumentUploadForm({
 
   function onFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    setSaved(false);
     if (!file) return;
     const problem = checkDocumentFile(file);
     setErrors((current) => ({ ...current, file: problem ?? undefined }));
@@ -66,7 +65,6 @@ export function DocumentUploadForm({
     if (withValidity && !validUntil) next.validUntil = "Indiquez la date de fin de validité du certificat.";
     setErrors(next);
     setError(null);
-    setSaved(false);
     if (Object.values(next).some(Boolean)) return;
 
     const body = new FormData();
@@ -84,7 +82,7 @@ export function DocumentUploadForm({
     const result = await apiRequest("POST", endpoint, body);
     setPending(false);
     if (!result.ok) return setError(documentUploadError(result));
-    setSaved(true);
+    toast.success("Document enregistré", withValidity ? "Pensez à en déposer un nouveau avant la date de fin de validité." : undefined);
     setDocTitle("");
     setPlacement("PRIVATE");
     setFormKey((key) => key + 1);
@@ -124,7 +122,7 @@ export function DocumentUploadForm({
               />
             )}
           </Field>
-          <Field id="document-title" label="Titre" error={errors.title}>
+          <Field id="document-title" label="Titre" hint="Prérempli avec le nom du fichier, modifiable." error={errors.title}>
             {(control) => (
               <Input {...control} value={docTitle} onChange={(event) => setDocTitle(event.target.value)} maxLength={120} />
             )}
@@ -149,12 +147,9 @@ export function DocumentUploadForm({
           )}
         </div>
         <FormAlert message={error} />
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button type="submit" loading={pending} className="self-start">
-            Envoyer le document
-          </Button>
-          {saved && <Notice tone="success">Document enregistré.</Notice>}
-        </div>
+        <Button type="submit" loading={pending} className="self-start">
+          Envoyer le document
+        </Button>
       </form>
     </Card>
   );

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Th } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { formatAmount, formatPrices } from "@/lib/format";
 import type { AdminPlan } from "@/lib/types";
@@ -26,6 +27,7 @@ function EntranceFeeCell({ plan }: { plan: AdminPlan }) {
 
 export function PlansTable({ plans }: { plans: AdminPlan[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [editing, setEditing] = useState<AdminPlan | null>(null);
   const [archiving, setArchiving] = useState<AdminPlan | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
@@ -39,6 +41,7 @@ export function PlansTable({ plans }: { plans: AdminPlan[] }) {
     const result = await apiRequest<AdminPlan>("DELETE", `/admin/plans/${archiving.id}`);
     setPendingId(null);
     if (!result.ok) return setArchiveError(result.error);
+    toast.success(`Formule « ${archiving.name} » archivée`, "Les pratiquants qui la paient déjà continuent d'être prélevés.");
     setArchiving(null);
     router.refresh();
   }
@@ -49,6 +52,7 @@ export function PlansTable({ plans }: { plans: AdminPlan[] }) {
     const result = await apiRequest<AdminPlan>("PATCH", `/admin/plans/${plan.id}`, { active: true });
     setPendingId(null);
     if (!result.ok) return setError(result.error);
+    toast.success(`Formule « ${plan.name} » réactivée`);
     router.refresh();
   }
 
@@ -139,6 +143,7 @@ export function PlansTable({ plans }: { plans: AdminPlan[] }) {
         plan={editing}
         onClose={() => setEditing(null)}
         onSaved={() => {
+          toast.success("Formule enregistrée");
           setEditing(null);
           router.refresh();
         }}

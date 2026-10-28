@@ -7,6 +7,7 @@ import { DeleteMemberZone } from "@/components/admin/members/delete-member-zone"
 import { MemberLicenseRequests } from "@/components/admin/members/member-license-requests";
 import { MemberLicences } from "@/components/admin/members/member-licences";
 import { MemberRole } from "@/components/admin/members/member-role";
+import { MemberTemporaryPassword } from "@/components/admin/members/member-temporary-password";
 import { MemberReminders } from "@/components/admin/members/member-reminders";
 import { fullName } from "@/components/admin/members/query";
 import { SubscriptionsTable } from "@/components/admin/members/subscriptions-table";
@@ -108,6 +109,12 @@ async function MemberDetail({ params, searchParams }: { params: Promise<{ id: st
           isSelf={admin.id === member.id}
         />
       </div>
+
+      {admin.id !== member.id && (
+        <div className="max-w-3xl">
+          <MemberTemporaryPassword memberId={member.id} name={name} />
+        </div>
+      )}
 
       <Section id="profile-title" title="Profil">
         <div className="max-w-3xl">

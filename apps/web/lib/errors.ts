@@ -46,6 +46,9 @@ export const apiErrorMessages: Record<string, string> = {
   charge_paid_online:
     "Payé en ligne : le statut ne peut pas être modifié ici. Un remboursement se fait depuis le tableau de bord Stripe.",
   license_request_done: "Cette demande est close : la licence a déjà été reçue.",
+  invalid_reset_token:
+    "Ce lien de réinitialisation n'est plus valable : il a expiré, a déjà servi ou a été remplacé par un plus récent. Demandez-en un nouveau.",
+  cannot_reset_own_password: "Pour votre propre compte, changez votre mot de passe depuis « Mon profil ».",
   invitation_not_found: "Cette invitation n'est plus en attente : elle a déjà été utilisée, révoquée ou a expiré.",
 };
 

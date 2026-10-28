@@ -6,15 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
+import type { ToastInput } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import type { ReminderResult } from "@/lib/types";
 
 export type ReminderTarget = { id: string; name: string };
 
-export function reminderMessage(result: ReminderResult, name: string): string {
+/* Toast after a reminder: a warning when no mail could leave. */
+export function reminderToast(result: ReminderResult, name: string): ToastInput {
   return result.delivery === "sent"
-    ? `Relance envoyée par e-mail à ${name}.`
-    : "Relance enregistrée (e-mail non envoyé : aucun serveur d'envoi configuré)";
+    ? { tone: "success", title: `Relance envoyée par e-mail à ${name}` }
+    : {
+        tone: "warning",
+        title: "Relance enregistrée, e-mail non envoyé",
+        description: "Aucun serveur d'envoi n'est configuré : prévenez le membre vous-même.",
+      };
 }
 
 /* POST /admin/members/:id/reminders: a French e-mail with a link to /cotisation, plus a history row. */

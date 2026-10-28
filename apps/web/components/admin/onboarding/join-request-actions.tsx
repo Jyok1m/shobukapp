@@ -6,6 +6,7 @@ import { FormAlert } from "@/components/auth/form-alert";
 import { notifyJoinRequestsChanged } from "@/components/shell/use-join-request-count";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { emailTakenAdmin } from "@/lib/onboarding";
 import type { JoinRequest, LinkInvitationResult } from "@/lib/types";
@@ -15,6 +16,7 @@ type Dialog = "invite" | "delete" | null;
 
 export function JoinRequestActions({ request }: { request: JoinRequest }) {
   const router = useRouter();
+  const toast = useToast();
   const [dialog, setDialog] = useState<Dialog>(null);
   const [pending, setPending] = useState<"invite" | "status" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +48,7 @@ export function JoinRequestActions({ request }: { request: JoinRequest }) {
     const result = await apiRequest("PATCH", `/admin/join-requests/${request.id}`, { status });
     setPending(null);
     if (!result.ok) return setError(result.error);
+    toast.success(status === "DECLINED" ? "Demande déclinée" : "Demande remise à traiter");
     notifyJoinRequestsChanged();
     router.refresh();
   }
@@ -58,6 +61,7 @@ export function JoinRequestActions({ request }: { request: JoinRequest }) {
       setPending(null);
       return setDialogError(result.error);
     }
+    toast.success("Demande supprimée");
     notifyJoinRequestsChanged();
     router.replace("/admin/demandes");
     router.refresh();

@@ -7,11 +7,11 @@ import { FormAlert } from "@/components/auth/form-alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordRules } from "@/components/ui/password-rules";
 import { apiRequest } from "@/lib/client-api";
+import { PASSWORD_MAX, PASSWORD_MIN, passwordLengthError } from "@/lib/password";
 import { ConsentCheckbox } from "./consent-checkbox";
-
-const PASSWORD_MIN = 10;
-const PASSWORD_MAX = 128;
 
 export const invalidCodeMessage =
   "Code ou adresse incorrects, ou code expiré. Après 5 essais, le code est bloqué : demandez-en un nouveau au bureau.";
@@ -35,6 +35,7 @@ export function AccountForm({ mode }: { mode: Mode }) {
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
+  const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [navigating, startNavigation] = useTransition();
 
@@ -44,7 +45,6 @@ export function AccountForm({ mode }: { mode: Mode }) {
     const text = (key: string) => String(data.get(key) ?? "").trim();
     const firstName = text("firstName");
     const lastName = text("lastName");
-    const password = String(data.get("password") ?? "");
     const email = mode.kind === "code" ? text("email") : mode.email;
     const code = mode.kind === "code" ? normaliseCode(text("code")) : "";
 
@@ -55,9 +55,8 @@ export function AccountForm({ mode }: { mode: Mode }) {
       if (!/^\S+@\S+\.\S+$/.test(email)) next.email = "Indiquez l'adresse e-mail à laquelle vous avez reçu le code.";
       if (code.replace(/-/g, "").length !== 8) next.code = "Le code compte 8 caractères, au format XXXX-XXXX.";
     }
-    if (password.length < PASSWORD_MIN) next.password = `Le mot de passe doit contenir au moins ${PASSWORD_MIN} caractères.`;
-    else if (password.length > PASSWORD_MAX)
-      next.password = `Le mot de passe ne doit pas dépasser ${PASSWORD_MAX} caractères.`;
+    const passwordError = passwordLengthError(password);
+    if (passwordError) next.password = passwordError;
     if (data.get("acceptTerms") !== "on")
       next.acceptTerms = "Vous devez accepter les conditions d'utilisation pour créer un compte.";
     setErrors(next);
@@ -158,12 +157,14 @@ export function AccountForm({ mode }: { mode: Mode }) {
           )}
         </Field>
       </div>
-      <Field id="password" label="Mot de passe" hint={`Au moins ${PASSWORD_MIN} caractères.`} error={errors.password}>
+      <Field id="password" label="Mot de passe" error={errors.password}>
         {(control) => (
-          <Input
+          <PasswordInput
             {...control}
+            aria-describedby={[control["aria-describedby"], "password-rules"].filter(Boolean).join(" ")}
             name="password"
-            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
             autoComplete="new-password"
             minLength={PASSWORD_MIN}
             maxLength={PASSWORD_MAX}
@@ -171,6 +172,7 @@ export function AccountForm({ mode }: { mode: Mode }) {
           />
         )}
       </Field>
+      <PasswordRules id="password-rules" password={password} />
       <ConsentCheckbox id="acceptTerms" error={errors.acceptTerms}>
         J&apos;accepte les conditions d&apos;utilisation et la{" "}
         <Link href="/confidentialite" target="_blank" rel="noopener" className="font-medium text-accent underline underline-offset-2">

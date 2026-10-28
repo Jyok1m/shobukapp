@@ -27,10 +27,12 @@ Tokens in `app/globals.css` (light / dark), every text pair at least 4.5:1, bord
 
 - **Dark mode**: every token is redefined under `prefers-color-scheme: dark` (via `:root:not([data-theme="light"])`) and under `:root[data-theme="dark"]`. One icon button (moon in light, sun in dark, "Activer le thème sombre / clair") toggles; until the first click the page follows the system. The choice is stored in localStorage (try/catch) and applied before paint by an inline script in `<head>` (`lib/theme-script.ts`, a constant: never interpolate anything user-controlled into it).
 - Fonts through `next/font`: one sans for the UI, optionally one serif for titles.
-- Shared components in `components/ui/`: `Button`, `Input`, `Select`, `Field` (label, hint, error), `Card`, `Badge` (subscription status), `Table`, `EmptyState`, `ConfirmDialog`, `FileDrop`. Build a new primitive only if none fits.
+- Shared components in `components/ui/`: `Button`, `Input`, `PasswordInput`, `PasswordRules`, `Select`, `Field` (label, hint, error), `Card`, `Badge` (subscription status), `Table`, `EmptyState`, `ConfirmDialog`, `FileDrop`, `Toast`. Build a new primitive only if none fits.
 - Layout: sidebar navigation on desktop, bottom or burger navigation on mobile. Admin screens share the shell with an "Administration" section visible only to admins.
 - Forms: server actions or client fetch to `/api/*`, inline French error messages from the API error code, never a raw API message.
 - Destructive actions (delete document, archive plan) go through `ConfirmDialog`.
+- Toasts (`components/ui/toast.tsx`, `useToast()`): a short French confirmation after an action ("Profil enregistré"), auto-dismissed after 6 s, paused on hover or focus. Top of the screen on mobile (clear of the cookie notice), bottom right on tablet, top right on desktop. A toast echoes, it never replaces an inline error: problems stay next to the field or in the form.
+- Password fields use `PasswordInput` (show/hide button) and every new password shows `PasswordRules` (live checklist).
 - Statuses in French: "Actif", "En retard de paiement", "Résilié", "Sans cotisation", "Certificat expiré". The UI says **cotisation**, never abonnement.
 - Cookie notice: informational only (one strictly necessary session cookie), links to `/confidentialite`. Sticky at the bottom on mobile, a small card at the bottom right on desktop (clear of the sidebar).
 - Accessibility: every input has a label, focus is visible, contrast at least AA.

@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { formatAmount } from "@/lib/format";
 import type { AdminProduct, ProductKind } from "@/lib/types";
@@ -95,6 +96,7 @@ function ProductRow({ product }: { product: AdminProduct }) {
 
 function ProductEditForm({ product, onDone }: { product: AdminProduct; onDone: () => void }) {
   const router = useRouter();
+  const toast = useToast();
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -133,6 +135,7 @@ function ProductEditForm({ product, onDone }: { product: AdminProduct; onDone: (
     const result = await apiRequest<AdminProduct>("PATCH", `/admin/products/${product.id}`, changes);
     setPending(false);
     if (!result.ok) return setError(result.error);
+    toast.success(`Produit « ${name} » enregistré`);
     onDone();
     router.refresh();
   }

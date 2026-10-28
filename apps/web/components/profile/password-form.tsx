@@ -5,39 +5,34 @@ import { FormAlert } from "@/components/auth/form-alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Notice } from "@/components/ui/notice";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordRules } from "@/components/ui/password-rules";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
-
-const PASSWORD_MIN = 10;
-const PASSWORD_MAX = 128;
+import { PASSWORD_MAX, PASSWORD_MIN, passwordLengthError } from "@/lib/password";
 
 type FieldErrors = Partial<Record<"currentPassword" | "newPassword" | "confirmPassword", string>>;
 
 export function PasswordForm() {
+  const toast = useToast();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [saved, setSaved] = useState(false);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    const currentPassword = String(data.get("currentPassword") ?? "");
-    const newPassword = String(data.get("newPassword") ?? "");
-    const confirmPassword = String(data.get("confirmPassword") ?? "");
-
     const errors: FieldErrors = {};
     if (!currentPassword) errors.currentPassword = "Indiquez votre mot de passe actuel.";
-    if (newPassword.length < PASSWORD_MIN)
-      errors.newPassword = `Le mot de passe doit contenir au moins ${PASSWORD_MIN} caractères.`;
-    else if (newPassword.length > PASSWORD_MAX)
-      errors.newPassword = `Le mot de passe ne doit pas dépasser ${PASSWORD_MAX} caractères.`;
+    const lengthError = passwordLengthError(newPassword);
+    if (lengthError) errors.newPassword = lengthError;
+    else if (newPassword === currentPassword)
+      errors.newPassword = "Choisissez un mot de passe différent de l'actuel.";
     if (confirmPassword !== newPassword) errors.confirmPassword = "Les deux mots de passe ne correspondent pas.";
     setFieldErrors(errors);
     setError(null);
-    setSaved(false);
     if (Object.keys(errors).length > 0) return;
 
     setPending(true);
@@ -51,30 +46,40 @@ export function PasswordForm() {
       }
       return;
     }
-    form.reset();
-    setSaved(true);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    toast.success("Mot de passe modifié", "Vos autres appareils ont été déconnectés.");
   }
 
   return (
-    <Card title="Mot de passe">
+    <Card
+      title="Mot de passe"
+      description="Saisissez d'abord votre mot de passe actuel, puis le nouveau deux fois. Le bouton en forme d'œil affiche ce que vous tapez."
+    >
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <Field id="currentPassword" label="Mot de passe actuel" error={fieldErrors.currentPassword}>
           {(control) => (
-            <Input {...control} name="currentPassword" type="password" autoComplete="current-password" required />
+            <PasswordInput
+              {...control}
+              name="currentPassword"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              autoComplete="current-password"
+              maxLength={PASSWORD_MAX}
+              required
+            />
           )}
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            id="newPassword"
-            label="Nouveau mot de passe"
-            hint={`Au moins ${PASSWORD_MIN} caractères.`}
-            error={fieldErrors.newPassword}
-          >
+          <Field id="newPassword" label="Nouveau mot de passe" error={fieldErrors.newPassword}>
             {(control) => (
-              <Input
+              <PasswordInput
                 {...control}
+                aria-describedby={[control["aria-describedby"], "new-password-rules"].filter(Boolean).join(" ")}
                 name="newPassword"
-                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
                 autoComplete="new-password"
                 minLength={PASSWORD_MIN}
                 maxLength={PASSWORD_MAX}
@@ -84,17 +89,28 @@ export function PasswordForm() {
           </Field>
           <Field id="confirmPassword" label="Confirmer le nouveau mot de passe" error={fieldErrors.confirmPassword}>
             {(control) => (
-              <Input {...control} name="confirmPassword" type="password" autoComplete="new-password" required />
+              <PasswordInput
+                {...control}
+                name="confirmPassword"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                autoComplete="new-password"
+                maxLength={PASSWORD_MAX}
+                required
+              />
             )}
           </Field>
         </div>
+        <PasswordRules
+          id="new-password-rules"
+          password={newPassword}
+          confirmation={confirmPassword}
+          differentFrom={{ value: currentPassword, label: "du mot de passe actuel" }}
+        />
         <FormAlert message={error} />
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button type="submit" variant="secondary" loading={pending}>
-            Changer le mot de passe
-          </Button>
-          {saved && <Notice tone="success">Mot de passe modifié. Vos autres appareils ont été déconnectés.</Notice>}
-        </div>
+        <Button type="submit" variant="secondary" loading={pending} className="self-start">
+          Changer le mot de passe
+        </Button>
       </form>
     </Card>
   );

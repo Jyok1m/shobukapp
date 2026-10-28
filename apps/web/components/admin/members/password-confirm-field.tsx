@@ -1,7 +1,7 @@
 "use client";
 
 import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 
 /* The acting admin re-enters their own password before a sensitive change. */
 export function PasswordConfirmField({
@@ -18,9 +18,8 @@ export function PasswordConfirmField({
   return (
     <Field id={id} label="Votre mot de passe" hint="Celui de votre propre compte, pour confirmer que c'est bien vous.">
       {(control) => (
-        <Input
+        <PasswordInput
           {...control}
-          type="password"
           autoComplete="current-password"
           value={value}
           onChange={(event) => onChange(event.target.value)}

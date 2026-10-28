@@ -9,6 +9,8 @@ Email and password handled by the API, server-side sessions in Postgres. No JWT:
 - `POST /auth/login`: same generic error for unknown email and wrong password (`invalid_credentials`), so the form does not reveal who has an account.
 - `POST /auth/logout`: deletes the session row and clears the cookie.
 - `GET /auth/me`: the current user projection (never the hash), or 401.
+- `POST /auth/password/forgot {email}`: always 204, whether the address has an account or not, and without waiting for the mail. See Password reset.
+- `POST /auth/password/reset {token, newPassword, acceptTerms?}`: 204, no session opened. `invalid_reset_token` for an unknown, used, replaced or expired link.
 
 ## Sessions
 
@@ -21,13 +23,21 @@ Email and password handled by the API, server-side sessions in Postgres. No JWT:
 
 - argon2id with the library defaults. Minimum 10 characters, no composition rules.
 - The hash is selected only in `AuthService`. The user as seen by themself or by an admin goes through `selfUserSelect`, which does not carry it, so a new endpoint cannot leak it by forgetting a `delete`. `selfUserSelect` carries every profile field: never use it to show a user to another member (the directory has its own select, `members.md`).
-- Password reset by email is not in the MVP. Until it exists, an admin cannot reset a password either: they would have to know or choose it, which is exactly what we refuse.
+- The web shows the rule live under every new password (`PasswordRules`: length counter, confirmation, different from the current one) and every password field has a show/hide button (`PasswordInput`). `lib/password.ts` mirrors the API limits.
+
+## Password reset
+
+- "Mot de passe oublié ?" on the login page leads to `/mot-de-passe-oublie`. The mail carries `${WEB_URL}/mot-de-passe-oublie/nouveau?token=...`: 32 random bytes, base64url, valid one hour, single use. Only `sha256(token)` is stored in `password_resets`.
+- A new request deletes the previous links of the account. The reset is claimed atomically (`used_at`), deletes the other links and every session, clears `must_change_password`, and asks for `acceptTerms` (`terms_required`) when the account never accepted the terms (created by an admin). A confirmation mail follows.
+- Throttled like login: 10 per minute, keyed on the email (forgot) or the token (reset).
+- The reset page sets `Referrer-Policy: no-referrer`: the token must not leak through a link.
+- An admin can also set a temporary password (`members.md`, Temporary password). They choose it, so the member must replace it at the next login.
 
 ## Guards
 
 - `SessionGuard` (global, opt-out with `@Public()`): reads the cookie, resolves the session, sets `req.user`.
 - `RolesGuard` (global, after `SessionGuard`): enforces `@Roles('ADMIN')`. Registered in that order in `AppModule`. The first admin routes come with an e2e test checking that each `/admin/*` route answers 403 to a practitioner and 401 to a visitor.
-- Rate limit (`@nestjs/throttler`, `AppThrottlerGuard`): 300 requests per minute globally, 10 per minute on register, login and password change. The bucket is keyed on the email in the body, else the session, else the IP.
+- Rate limit (`@nestjs/throttler`, `AppThrottlerGuard`): 300 requests per minute globally, 10 per minute on register, login, password change, forgot and reset. The bucket is keyed on the email in the body, else the session, else the IP.
 - Errors carry a stable `code` (`unauthenticated`, `forbidden`, `invalid_credentials`, `email_taken`): the web maps it to a French message, never shows the raw API message.
 
 ## Pitfall: client IP behind the web proxy

@@ -12,6 +12,7 @@ import { Field } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { chargeStatus, formatAmount, formatDate } from "@/lib/format";
 import { deliveryMessage } from "@/lib/onboarding";
@@ -61,6 +62,7 @@ export function MemberCharges({
   products: AdminProduct[];
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [formKey, setFormKey] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
@@ -113,6 +115,7 @@ export function MemberCharges({
     const result = await apiRequest<Charge>("PATCH", `/admin/charges/${target.charge.id}`, { status: target.status });
     setBusyId(null);
     if (!result.ok) return result.error;
+    toast.success(target.status === "PENDING" ? "Paiement remis en attente" : "Statut du paiement mis à jour");
     router.refresh();
     return null;
   }

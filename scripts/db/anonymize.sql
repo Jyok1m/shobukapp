@@ -44,6 +44,10 @@ UPDATE app_settings SET stripe_live = false, updated_by_id = NULL;
 
 -- A production session or a pending signup link would otherwise work on dev.
 DELETE FROM sessions;
+-- Guarded: production may not have the table yet when this runs from dev.
+DO $$ BEGIN
+  IF to_regclass('password_resets') IS NOT NULL THEN DELETE FROM password_resets; END IF;
+END $$;
 DELETE FROM invitations WHERE used_at IS NULL AND revoked_at IS NULL;
 UPDATE invitations SET email = 'invite-' || id || '@anonyme.invalid',
   first_name = 'Invité', last_name = 'Anonyme';

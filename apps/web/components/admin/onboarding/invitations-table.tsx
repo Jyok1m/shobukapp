@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, Td, Th } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { formatShortDate } from "@/lib/format";
 import { invitationKinds, invitationStatuses } from "@/lib/onboarding";
@@ -15,6 +16,7 @@ import type { Invitation } from "@/lib/types";
 
 export function InvitationsTable({ invitations }: { invitations: Invitation[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [revoking, setRevoking] = useState<Invitation | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +28,7 @@ export function InvitationsTable({ invitations }: { invitations: Invitation[] })
     const result = await apiRequest("DELETE", `/admin/invitations/${revoking.id}`);
     setPending(false);
     if (!result.ok) return setError(result.error);
+    toast.success("Invitation révoquée", "Le lien ou le code ne permet plus de créer un compte.");
     setRevoking(null);
     router.refresh();
   }

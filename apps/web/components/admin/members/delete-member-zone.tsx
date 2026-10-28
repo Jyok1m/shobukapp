@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 
 /* Case and surrounding spaces do not matter: the typed name is a safety catch, not a secret. */
@@ -15,6 +16,7 @@ function sameName(a: string, b: string): boolean {
 
 export function DeleteMemberZone({ memberId, firstName, lastName }: { memberId: string; firstName: string; lastName: string }) {
   const router = useRouter();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [pending, setPending] = useState(false);
@@ -29,6 +31,7 @@ export function DeleteMemberZone({ memberId, firstName, lastName }: { memberId: 
       setPending(false);
       return setError(result.error);
     }
+    toast.success("Membre supprimé", "Son compte et ses données ont été effacés.");
     router.replace("/admin/membres");
     router.refresh();
   }

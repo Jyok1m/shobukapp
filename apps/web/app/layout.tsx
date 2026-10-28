@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Shippori_Mincho } from "next/font/google";
 import { CookieNotice } from "@/components/cookie-notice";
+import { ToastProvider } from "@/components/ui/toast";
 import { themeBootScript } from "@/lib/theme-script";
 import "./globals.css";
 
@@ -32,8 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body className="flex min-h-full flex-col bg-paper font-sans text-ink">
-        {children}
-        <CookieNotice />
+        <ToastProvider>
+          {children}
+          <CookieNotice />
+        </ToastProvider>
       </body>
     </html>
   );
