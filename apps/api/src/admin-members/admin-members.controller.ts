@@ -22,6 +22,7 @@ import {
   CreateMemberDto,
   ListMembersQuery,
   ReminderDto,
+  TemporaryPasswordDto,
 } from './dto/admin-members.dto';
 
 @Controller('admin/members')
@@ -86,6 +87,17 @@ export class AdminMembersController {
     @Body() dto: ChangeRoleDto,
   ) {
     return this.members.changeRole(admin, id, dto.role, dto.password);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post(':id/password')
+  @HttpCode(204)
+  setTemporaryPassword(
+    @CurrentUser() admin: SelfUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TemporaryPasswordDto,
+  ): Promise<void> {
+    return this.members.setTemporaryPassword(admin, id, dto);
   }
 
   @Post(':id/reminders')

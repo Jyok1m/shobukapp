@@ -58,7 +58,13 @@ export function CodeInvitationForm() {
             <Field id="invite-last-name" label="Nom" error={errors.lastName}>
               {(control) => <Input {...control} name="lastName" maxLength={80} autoComplete="off" />}
             </Field>
-            <Field id="invite-email" label="Adresse e-mail" error={errors.email} className="sm:col-span-2">
+            <Field
+              id="invite-email"
+              label="Adresse e-mail"
+              hint="Le code y est envoyé, et le compte sera créé avec cette adresse : vérifiez-la avec le pratiquant."
+              error={errors.email}
+              className="sm:col-span-2"
+            >
               {(control) => <Input {...control} name="email" type="email" maxLength={254} autoComplete="off" />}
             </Field>
           </div>

@@ -13,7 +13,13 @@ import type { AuthenticatedRequest } from '../common/request';
 import type { SelfUser } from '../common/self-user';
 import { AuthService } from './auth.service';
 import { AllowPendingPassword, CurrentUser, Public } from './decorators';
-import { ChangePasswordDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import {
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
 import { SESSION_COOKIE, SessionService } from './session.service';
 
 function incomingToken(req: AuthenticatedRequest): string | undefined {
@@ -84,6 +90,28 @@ export class AuthController {
   ): Promise<void> {
     await this.auth.changePassword(req.user.id, dto);
     await this.sessions.revokeOthers(req.user.id, req.sessionToken);
+  }
+
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @Post('password/forgot')
+  @HttpCode(204)
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
+    await this.auth.requestPasswordReset(dto.email);
+  }
+
+  // No session is opened: the member signs in with the new password.
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @Post('password/reset')
+  @HttpCode(204)
+  async resetPassword(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ResetPasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    await this.auth.resetPassword(dto);
+    if (incomingToken(req)) this.sessions.clearCookie(res);
   }
 
   // The session the request arrived with is replaced, not left alive.

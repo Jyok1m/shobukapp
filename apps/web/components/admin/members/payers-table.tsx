@@ -6,15 +6,15 @@ import { FormAlert } from "@/components/auth/form-alert";
 import { MembershipBadge } from "@/components/membership-badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Notice } from "@/components/ui/notice";
 import { Table, Td, Th } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { cx } from "@/lib/cx";
 import { certificateState } from "@/lib/documents";
 import { cotisationLabel, formatAmount, formatShortDate } from "@/lib/format";
 import type { AdminMembersPage } from "@/lib/types";
 import { FederationBadges } from "./federation-badges";
 import { fullName, type MemberQuery } from "./query";
-import { ReminderDialog, reminderMessage, type ReminderTarget } from "./reminder-dialog";
+import { ReminderDialog, reminderToast, type ReminderTarget } from "./reminder-dialog";
 import { useMemberPages } from "./use-member-pages";
 
 function CertificateCell({ certificate }: { certificate: AdminMembersPage["items"][number]["medicalCertificate"] }) {
@@ -27,7 +27,7 @@ function CertificateCell({ certificate }: { certificate: AdminMembersPage["items
 export function PayersTable({ initial, query }: { initial: AdminMembersPage; query: MemberQuery }) {
   const { items, hasMore, pending, error, loadMore, update } = useMemberPages(initial, query);
   const [target, setTarget] = useState<ReminderTarget | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const toast = useToast();
 
   if (items.length === 0) {
     return (
@@ -44,7 +44,6 @@ export function PayersTable({ initial, query }: { initial: AdminMembersPage; que
 
   return (
     <div className="flex flex-col gap-4">
-      {notice && <Notice tone="success">{notice}</Notice>}
       <Table>
         <caption className="sr-only">Pratiquants et situation de paiement</caption>
         <thead>
@@ -114,10 +113,7 @@ export function PayersTable({ initial, query }: { initial: AdminMembersPage; que
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => {
-                        setNotice(null);
-                        setTarget({ id: member.id, name });
-                      }}
+                      onClick={() => setTarget({ id: member.id, name })}
                       aria-label={`Relancer ${name}`}
                     >
                       Relancer
@@ -140,7 +136,7 @@ export function PayersTable({ initial, query }: { initial: AdminMembersPage; que
         onClose={() => setTarget(null)}
         onSent={(result, sent) => {
           update(sent.id, { lastReminderAt: result.createdAt });
-          setNotice(reminderMessage(result, sent.name));
+          toast.show(reminderToast(result, sent.name));
           setTarget(null);
         }}
       />

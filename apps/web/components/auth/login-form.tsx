@@ -6,6 +6,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { FormAlert } from "./form-alert";
 import { postJson } from "./post-json";
 
@@ -46,16 +47,11 @@ export function LoginForm() {
         )}
       </Field>
       <Field id="password" label="Mot de passe">
-        {(control) => (
-          <Input
-            {...control}
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-        )}
+        {(control) => <PasswordInput {...control} name="password" autoComplete="current-password" required />}
       </Field>
+      <Link href="/mot-de-passe-oublie" className="-mt-2 self-end text-sm font-medium text-accent hover:underline">
+        Mot de passe oublié ?
+      </Link>
       <Button type="submit" loading={pending || navigating} className="mt-2 w-full">
         Se connecter
       </Button>

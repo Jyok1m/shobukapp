@@ -37,4 +37,11 @@ Every mail is sent from `no-reply@joachimjasmin.com` with `Reply-To: info@shobuk
 ## Accounts created by an admin
 
 - `POST /admin/members {firstName, lastName, email, phone?, temporaryPassword}` creates a complete account with `must_change_password` and no terms acceptance; pending invitations for that address are revoked. The member gets a mail without the password, which the admin hands over.
-- Until the member replaces it, every route but `/auth/me`, `/auth/logout` and `/auth/password` answers 403 `password_change_required`: the admin knows that password. `POST /auth/password` then also requires `acceptTerms` (the account never accepted them), and refuses the same password (`password_unchanged`).
+- Until the member replaces it (or resets it by email), every route but `/auth/me`, `/auth/logout` and `/auth/password` answers 403 `password_change_required`: the admin knows that password. `POST /auth/password` then also requires `acceptTerms` (the account never accepted them), and refuses the same password (`password_unchanged`).
+
+## Temporary password
+
+- `POST /admin/members/:id/password {temporaryPassword, password}`: the acting admin re-enters their own password (`password_confirmation_failed`) and cannot target themself (`cannot_reset_own_password`, their own change goes through "Mon profil"). Throttled to 10 per minute.
+- The member gets `must_change_password`, loses every session and pending reset link, and is told by mail, without the password. The web generates a random one, shows it once after the change for the admin to hand over, never by mail.
+- First advice to a member locked out stays "Mot de passe oublié ?": the admin only steps in when the member has no access to their mailbox.
+- Accepted risk, same as roles: a stolen admin session plus that admin's password can take over another account, admins included. The mail to the member is what makes it visible.

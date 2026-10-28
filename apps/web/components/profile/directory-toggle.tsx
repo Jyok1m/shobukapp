@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FormAlert } from "@/components/auth/form-alert";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 
 export function DirectoryToggle({ visible }: { visible: boolean }) {
   const router = useRouter();
+  const toast = useToast();
   const [checked, setChecked] = useState(visible);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +25,7 @@ export function DirectoryToggle({ visible }: { visible: boolean }) {
       setError(result.error);
       return;
     }
+    toast.success(next ? "Vous apparaissez dans l'annuaire" : "Vous n'apparaissez plus dans l'annuaire");
     router.refresh();
   }
 

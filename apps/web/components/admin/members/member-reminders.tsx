@@ -4,32 +4,22 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Notice } from "@/components/ui/notice";
+import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/format";
 import type { PaymentReminder } from "@/lib/types";
-import { ReminderDialog, reminderMessage, type ReminderTarget } from "./reminder-dialog";
+import { ReminderDialog, reminderToast, type ReminderTarget } from "./reminder-dialog";
 
 export function MemberReminders({ member, reminders }: { member: ReminderTarget; reminders: PaymentReminder[] }) {
   const router = useRouter();
   const [target, setTarget] = useState<ReminderTarget | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const toast = useToast();
 
   return (
     <Card title="Relances de paiement" description="Les relances envoyées à ce membre, de la plus récente à la plus ancienne.">
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setNotice(null);
-              setTarget(member);
-            }}
-            className="self-start"
-          >
-            Relancer
-          </Button>
-          {notice && <Notice tone="success">{notice}</Notice>}
-        </div>
+        <Button variant="secondary" onClick={() => setTarget(member)} className="self-start">
+          Relancer
+        </Button>
         {reminders.length === 0 ? (
           <p className="text-sm text-muted">Aucune relance pour l&apos;instant.</p>
         ) : (
@@ -54,7 +44,7 @@ export function MemberReminders({ member, reminders }: { member: ReminderTarget;
         target={target}
         onClose={() => setTarget(null)}
         onSent={(result, sent) => {
-          setNotice(reminderMessage(result, sent.name));
+          toast.show(reminderToast(result, sent.name));
           setTarget(null);
           router.refresh();
         }}

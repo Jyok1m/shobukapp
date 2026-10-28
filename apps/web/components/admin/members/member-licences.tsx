@@ -9,9 +9,9 @@ import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Notice } from "@/components/ui/notice";
 import { Select } from "@/components/ui/select";
 import { Table, Td, Th } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { DISCIPLINE_LABELS, checkDocumentFile, currentSeason, documentUploadError, seasonError } from "@/lib/documents";
 import { formatShortDate } from "@/lib/format";
@@ -22,9 +22,9 @@ type Errors = Partial<Record<"season" | "number" | "file", string>>;
 /* POST /admin/licenses upserts on member, season and discipline: the number is shared by the whole season, the file is per discipline. */
 export function MemberLicences({ memberId, licenses }: { memberId: string; licenses: License[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [deleting, setDeleting] = useState<License | null>(null);
@@ -48,7 +48,6 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
     };
     setErrors(next);
     setError(null);
-    setSaved(null);
     if (Object.values(next).some(Boolean)) return;
 
     const body = new FormData();
@@ -64,7 +63,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
     const result = await apiRequest<License>("POST", "/admin/licenses", body);
     setPending(false);
     if (!result.ok) return setError(documentUploadError(result));
-    setSaved(replacing ? `Licence ${label} mise à jour.` : `Licence ${label} ajoutée.`);
+    toast.success(replacing ? `Licence ${label} mise à jour` : `Licence ${label} ajoutée`);
     setFormKey((key) => key + 1);
     router.refresh();
   }
@@ -76,6 +75,7 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
     const result = await apiRequest("DELETE", `/admin/licenses/${deleting.id}`);
     setDeletePending(false);
     if (!result.ok) return setDeleteError(result.error);
+    toast.success(`Licence ${DISCIPLINE_LABELS[deleting.discipline]} ${deleting.season} supprimée`);
     setDeleting(null);
     router.refresh();
   }
@@ -174,12 +174,9 @@ export function MemberLicences({ memberId, licenses }: { memberId: string; licen
             </Field>
           </div>
           <FormAlert message={error} />
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button type="submit" variant="secondary" loading={pending} className="self-start">
-              Enregistrer la licence
-            </Button>
-            {saved && <Notice tone="success">{saved}</Notice>}
-          </div>
+          <Button type="submit" variant="secondary" loading={pending} className="self-start">
+            Enregistrer la licence
+          </Button>
         </form>
       </div>
 

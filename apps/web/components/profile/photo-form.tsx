@@ -7,6 +7,7 @@ import { MemberAvatar } from "@/components/member-avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { apiErrorMessages } from "@/lib/errors";
 import { PhotoCropDialog } from "./photo-crop-dialog";
@@ -25,6 +26,7 @@ type PhotoFormProps = {
 
 export function PhotoForm({ userId, firstName, lastName, photoVersion }: PhotoFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<"upload" | "remove" | null>(null);
@@ -56,6 +58,7 @@ export function PhotoForm({ userId, firstName, lastName, photoVersion }: PhotoFo
     const result = await apiRequest("POST", "/me/photo", body);
     setPending(null);
     if (!result.ok) return setCropError(result.error);
+    toast.success("Photo enregistrée");
     setPicked(null);
     router.refresh();
   }
@@ -66,6 +69,7 @@ export function PhotoForm({ userId, firstName, lastName, photoVersion }: PhotoFo
     setPending(null);
     setConfirming(false);
     if (!result.ok) return setError(result.error);
+    toast.success("Photo supprimée");
     router.refresh();
   }
 

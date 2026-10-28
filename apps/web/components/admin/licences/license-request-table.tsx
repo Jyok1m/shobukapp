@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Table, Td, Th } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import { DISCIPLINE_LABELS } from "@/lib/documents";
 import { formatShortDate } from "@/lib/format";
@@ -36,6 +37,7 @@ export function LicenseRequestTable({
   onDeleted: (id: string) => void;
 }) {
   const [busyId, setBusyId] = useState<string | null>(null);
+  const toast = useToast();
   const [rowError, setRowError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<LicenseRequest | null>(null);
   const [deletePending, setDeletePending] = useState(false);
@@ -47,6 +49,7 @@ export function LicenseRequestTable({
     const result = await apiRequest<LicenseRequest>("PATCH", `/admin/license-requests/${request.id}`, { status });
     setBusyId(null);
     if (!result.ok) return setRowError(result.error);
+    toast.success(status === "SENT" ? "Demande marquée comme envoyée à la FFJDA" : "Demande remise en attente");
     onUpdated(result.data);
   }
 
@@ -57,6 +60,7 @@ export function LicenseRequestTable({
     const result = await apiRequest("DELETE", `/admin/license-requests/${deleting.id}`);
     setDeletePending(false);
     if (!result.ok) return setDeleteError(result.error);
+    toast.success("Demande de licence supprimée");
     onDeleted(deleting.id);
     setDeleting(null);
   }

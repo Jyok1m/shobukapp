@@ -15,7 +15,7 @@ The dojo is the data controller. This app processes identity, contact, licence i
 
 - **Admin-created accounts**: the admin chooses a temporary password and therefore knows it until the member replaces it at first login (forced). An admin could log in first and accept the terms on the member's behalf: a limit of the design, accepted by the dojo.
 - **Role changes** are journaled (`role_changes`: who, whom, when) for accountability.
-- **Production to dev copies** (`deployment.md`) are anonymized before the dev API can read them: names, emails (except admins'), phones, addresses, emergency contacts, birth data, messages, join requests, reminder notes, document titles and licence numbers are replaced or cleared; production password hashes and sessions never reach dev; admins' documents are dropped. Files are not copied.
+- **Production to dev copies** (`deployment.md`) are anonymized before the dev API can read them: names, emails (except admins'), phones, addresses, emergency contacts, birth data, messages, join requests, reminder notes, document titles and licence numbers are replaced or cleared; production password hashes, sessions and reset links never reach dev; admins' documents are dropped. Files are not copied.
 
 ## Rights
 

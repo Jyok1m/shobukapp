@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Notice } from "@/components/ui/notice";
 import { Select } from "@/components/ui/select";
+import { useToast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/client-api";
 import type { SelfUser } from "@/lib/types";
 
@@ -64,7 +64,7 @@ const copy = {
   self: {
     identity: "Votre adresse e-mail ne peut pas être modifiée ici.",
     licence:
-      "Nécessaires pour établir votre licence FFJDA. Visibles uniquement par vous et les administrateurs du dojo.",
+      "Nécessaires pour établir votre licence FFJDA : complétez-les avant votre demande de licence. Visibles uniquement par vous et les administrateurs du dojo.",
     firstNameRequired: "Indiquez votre prénom.",
     lastNameRequired: "Indiquez votre nom.",
     submit: "Enregistrer mon profil",
@@ -82,9 +82,9 @@ const copy = {
 export function ProfileForm({ user, memberId }: { user: SelfUser; memberId?: string }) {
   const text = memberId ? copy.admin : copy.self;
   const router = useRouter();
+  const toast = useToast();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [saved, setSaved] = useState(false);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -101,7 +101,6 @@ export function ProfileForm({ user, memberId }: { user: SelfUser; memberId?: str
     if (!payload.lastName) errors.lastName = text.lastNameRequired;
     setFieldErrors(errors);
     setError(null);
-    setSaved(false);
     if (Object.keys(errors).length > 0) return;
 
     setPending(true);
@@ -111,7 +110,7 @@ export function ProfileForm({ user, memberId }: { user: SelfUser; memberId?: str
       setError(result.error);
       return;
     }
-    setSaved(true);
+    toast.success(memberId ? "Fiche du membre enregistrée" : "Profil enregistré");
     router.refresh();
   }
 
@@ -223,12 +222,9 @@ export function ProfileForm({ user, memberId }: { user: SelfUser; memberId?: str
         </div>
       </Card>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" loading={pending}>
-          {text.submit}
-        </Button>
-        {saved && <Notice tone="success">Profil enregistré.</Notice>}
-      </div>
+      <Button type="submit" loading={pending} className="self-start">
+        {text.submit}
+      </Button>
       <FormAlert message={error} />
     </form>
   );

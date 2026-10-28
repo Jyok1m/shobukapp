@@ -31,6 +31,17 @@
   --font-serif: var(--font-title), ui-serif, Georgia, serif;
 }
 
+@theme {
+  --animate-toast-in: toast-in 160ms ease-out;
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+  }
+}
+
 /* Dark tokens: same names, so every utility follows without a dark: variant. */
 @layer theme {
   :root {
