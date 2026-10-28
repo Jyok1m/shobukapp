@@ -174,7 +174,7 @@ function TourOverlay({
     ref.current?.querySelector<HTMLButtonElement>("[data-tour-next]")?.focus();
   }, [index]);
 
-  const pad = 6;
+  const pad = 4;
   const spotlight: CSSProperties | undefined = rect
     ? {
         top: rect.top - pad,
@@ -187,7 +187,7 @@ function TourOverlay({
   /* Beside the sidebar link on a wide screen; on a phone the card sits at the bottom, clear of the header. */
   const beside: CSSProperties | undefined =
     rect && wide && !viaMenu
-      ? { left: rect.left + rect.width + 24, top: Math.max(16, Math.min(rect.top - 24, window.innerHeight - 380)) }
+      ? { left: rect.left + rect.width + 16, top: Math.max(16, Math.min(rect.top - 16, window.innerHeight - 300)) }
       : undefined;
 
   return (
@@ -205,7 +205,7 @@ function TourOverlay({
         <div
           aria-hidden
           style={spotlight}
-          className="pointer-events-none fixed rounded-lg outline-4 outline-accent transition-all motion-reduce:transition-none"
+          className="pointer-events-none fixed rounded-lg outline-2 outline-accent transition-all motion-reduce:transition-none"
         />
       ) : (
         <div aria-hidden className="fixed inset-0 bg-scrim" />
@@ -214,63 +214,62 @@ function TourOverlay({
       <div
         style={beside}
         className={cx(
-          "fixed flex max-h-11/12 flex-col gap-5 overflow-y-auto rounded-xl border border-line bg-surface p-5 text-ink shadow-sm sm:p-6",
+          "fixed flex max-h-1/2 flex-col gap-3 overflow-y-auto rounded-lg border border-line bg-surface p-4 text-ink shadow-sm lg:max-h-4/5",
           beside
-            ? "w-full max-w-md"
+            ? "w-full max-w-sm"
             : rect
-              ? "inset-x-4 bottom-4 mx-auto max-w-lg"
-              : "inset-x-4 top-1/2 mx-auto max-w-lg -translate-y-1/2",
+              ? "inset-x-3 bottom-3 mx-auto max-w-sm"
+              : "inset-x-3 top-1/2 mx-auto max-w-sm -translate-y-1/2",
         )}
       >
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-medium text-muted">
+          <p className="text-xs font-medium text-muted">
             Étape {index + 1} sur {steps.length}
           </p>
           <button
             type="button"
             onClick={onClose}
-            className="min-h-11 rounded-md px-2 text-sm font-medium text-accent underline underline-offset-2 hover:text-accent-strong focus-visible:outline-2 focus-visible:outline-accent"
+            className="rounded-md px-1 py-1 text-xs font-medium text-accent underline underline-offset-2 hover:text-accent-strong focus-visible:outline-2 focus-visible:outline-accent"
           >
             Arrêter la visite
           </button>
         </div>
 
-        <div aria-hidden className="flex gap-1.5">
+        <div aria-hidden className="flex gap-1">
           {steps.map((_, i) => (
-            <span key={i} className={cx("h-1.5 flex-1 rounded-full", i <= index ? "bg-accent" : "bg-line")} />
+            <span key={i} className={cx("h-1 flex-1 rounded-full", i <= index ? "bg-accent" : "bg-line")} />
           ))}
         </div>
 
-        <div className="flex flex-col gap-3" aria-live="polite">
-          <h2 id={titleId} className="font-serif text-xl font-bold sm:text-2xl">
+        <div className="flex flex-col gap-1.5" aria-live="polite">
+          <h2 id={titleId} className="font-serif text-lg font-bold">
             {step.title}
           </h2>
-          <p id={bodyId} className="text-base leading-relaxed sm:text-lg">
+          <p id={bodyId} className="text-sm leading-relaxed text-muted">
             {step.body}
           </p>
           {viaMenu && (
-            <p className="rounded-md border border-line bg-accent-soft px-3 py-2 text-base text-ink">
+            <p className="mt-1 rounded-md border border-line bg-accent-soft px-2.5 py-1.5 text-xs text-ink">
               Sur téléphone, cette rubrique se trouve dans le menu : touchez le bouton « Menu », en haut à droite, éclairé
               ici.
             </p>
           )}
         </div>
 
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Button
             variant="secondary"
             onClick={() => onIndex(index - 1)}
             disabled={index === 0}
-            className="min-h-12 text-base"
           >
             Retour
           </Button>
           {last && onContinueAdmin ? (
-            <Button data-tour-next onClick={onContinueAdmin} className="min-h-12 text-base">
+            <Button data-tour-next onClick={onContinueAdmin}>
               Continuer avec l&apos;administration
             </Button>
           ) : (
-            <Button data-tour-next onClick={() => (last ? onClose() : onIndex(index + 1))} className="min-h-12 text-base">
+            <Button data-tour-next onClick={() => (last ? onClose() : onIndex(index + 1))}>
               {last ? "Terminer la visite" : "Suivant"}
             </Button>
           )}
@@ -279,7 +278,7 @@ function TourOverlay({
           <button
             type="button"
             onClick={onClose}
-            className="-mt-2 self-center text-sm font-medium text-accent underline underline-offset-2"
+            className="-mt-1 self-center text-xs font-medium text-accent underline underline-offset-2"
           >
             Terminer ici
           </button>

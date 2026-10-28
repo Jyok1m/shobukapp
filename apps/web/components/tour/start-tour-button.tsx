@@ -15,7 +15,7 @@ export function StartTourButton({
 }) {
   const { start } = useTour();
   return (
-    <Button variant={buttonVariant} onClick={() => start(variant)} className="min-h-12 text-base">
+    <Button variant={buttonVariant} onClick={() => start(variant)}>
       {label}
     </Button>
   );
