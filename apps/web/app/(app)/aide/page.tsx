@@ -132,16 +132,16 @@ const adminGuides: Guide[] = [
 
 function GuideList({ guides }: { guides: Guide[] }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {guides.map((guide) => (
         <details key={guide.question} className="group rounded-lg border border-line bg-surface">
-          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-3 text-base font-medium text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent sm:text-lg">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent">
             {guide.question}
-            <span aria-hidden className="text-2xl leading-none text-accent transition-transform group-open:rotate-45">
+            <span aria-hidden className="text-lg leading-none text-accent transition-transform group-open:rotate-45">
               +
             </span>
           </summary>
-          <ol className="flex list-decimal flex-col gap-3 px-4 pt-1 pb-5 pl-10 text-base leading-relaxed text-ink sm:text-lg">
+          <ol className="flex list-decimal flex-col gap-1.5 px-4 pt-0 pb-4 pl-9 text-sm leading-relaxed text-muted">
             {guide.steps.map((step, index) => (
               <li key={index}>{step}</li>
             ))}
@@ -156,7 +156,7 @@ async function Help() {
   const user = await requireUser();
   const isAdmin = user.role === "ADMIN";
   return (
-    <div className="flex max-w-3xl flex-col gap-10">
+    <div className="flex max-w-3xl flex-col gap-8">
       <Card title="Visite guidée" description="Une présentation de l'espace, une étape à la fois. Elle ne modifie rien.">
         <div className="flex flex-col gap-3 sm:flex-row">
           <StartTourButton variant="member" label="Revoir la visite guidée" />
@@ -167,16 +167,16 @@ async function Help() {
       </Card>
 
       <section aria-labelledby="guides-title" className="flex flex-col gap-4">
-        <h2 id="guides-title" className="font-serif text-xl font-bold text-ink">
+        <h2 id="guides-title" className="font-serif text-lg font-bold text-ink">
           Pas à pas
         </h2>
-        <p className="text-base text-muted">Appuyez sur une question pour voir les étapes.</p>
+        <p className="text-sm text-muted">Appuyez sur une question pour voir les étapes.</p>
         <GuideList guides={memberGuides} />
       </section>
 
       {isAdmin && (
         <section aria-labelledby="admin-guides-title" className="flex flex-col gap-4">
-          <h2 id="admin-guides-title" className="font-serif text-xl font-bold text-ink">
+          <h2 id="admin-guides-title" className="font-serif text-lg font-bold text-ink">
             Administration
           </h2>
           <GuideList guides={adminGuides} />
@@ -184,7 +184,7 @@ async function Help() {
       )}
 
       <Card title="Besoin d'une personne ?">
-        <p className="text-base leading-relaxed text-ink">
+        <p className="text-sm leading-relaxed text-ink">
           Le bureau du dojo vous aide volontiers : appelez le{" "}
           <a href={DOJO.phoneHref} className="font-medium text-accent underline underline-offset-2">
             {DOJO.phone}
