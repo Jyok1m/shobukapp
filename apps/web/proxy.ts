@@ -20,6 +20,7 @@ export const config = {
     "/messagerie/:path*",
     "/documents/:path*",
     "/licences/:path*",
+    "/aide",
     "/admin/:path*",
     "/admin",
     "/premiere-connexion",

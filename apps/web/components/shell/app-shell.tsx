@@ -7,6 +7,7 @@ import { Brand } from "@/components/brand";
 import { DojoContact } from "@/components/dojo-contact";
 import { DojoSiteLink } from "@/components/dojo-site-link";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { TourProvider } from "@/components/tour/tour";
 import { cx } from "@/lib/cx";
 import type { Role, StripeMode } from "@/lib/types";
 import { LogoutButton } from "./logout-button";
@@ -14,7 +15,7 @@ import { adminNav, memberNav, type NavItem } from "./nav";
 import { useJoinRequestCount } from "./use-join-request-count";
 import { useUnreadCount } from "./use-unread-count";
 
-export type ShellUser = { firstName: string; lastName: string; role: Role };
+export type ShellUser = { id: string; firstName: string; lastName: string; role: Role };
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -42,6 +43,7 @@ function NavList({
             <Link
               href={item.href}
               onClick={onNavigate}
+              data-tour={item.href}
               aria-current={active ? "page" : undefined}
               className={cx(
                 "flex min-h-11 items-center justify-between gap-2 rounded-md px-3 py-2 text-sm lg:min-h-9 transition-colors focus-visible:outline-2 focus-visible:outline-accent",
@@ -113,6 +115,7 @@ export function AppShell({
   );
 
   return (
+    <TourProvider userId={user.id} isAdmin={user.role === "ADMIN"}>
     <div className="flex min-h-full flex-1 flex-col lg:flex-row">
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-surface px-4 lg:hidden">
         <Brand href="/tableau-de-bord" />
@@ -121,6 +124,7 @@ export function AppShell({
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
           aria-controls="mobile-nav"
+          data-tour="menu"
           className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent"
         >
           {open ? "Fermer" : "Menu"}
@@ -169,5 +173,6 @@ export function AppShell({
         {children}
       </main>
     </div>
+    </TourProvider>
   );
 }
