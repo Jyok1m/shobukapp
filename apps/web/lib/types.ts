@@ -271,6 +271,8 @@ export type LicenseRequest = {
   createdAt: string;
   updatedAt: string;
   member: { id: string; firstName: string; lastName: string; email: string };
+  /* The member's licence for this request's season and discipline, if one was saved. */
+  license: { id: string; number: string; hasFile: boolean } | null;
   /* Profile fields the FFJDA form needs and the member has not filled. */
   missingFields: LicenseRequestMissingField[];
 };
