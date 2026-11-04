@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { FormAlert } from "@/components/auth/form-alert";
+import { LicenseFileActions } from "@/components/documents/license-viewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -71,6 +72,7 @@ export function LicenseRequestTable({
             {showMember ? <Th>Membre</Th> : <Th>Saison</Th>}
             <Th>Discipline</Th>
             <Th>Statut</Th>
+            <Th>Licence</Th>
             <Th>Note</Th>
             <Th>Créée le</Th>
             <Th>
@@ -103,6 +105,20 @@ export function LicenseRequestTable({
                   <Badge tone={status.tone} className="whitespace-nowrap">
                     {status.label}
                   </Badge>
+                </Td>
+                <Td className="min-w-40">
+                  {request.license ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-mono text-sm">{request.license.number}</span>
+                      {request.license.hasFile ? (
+                        <LicenseFileActions license={{ id: request.license.id, season: request.season, discipline: request.discipline }} />
+                      ) : (
+                        <span className="text-xs text-muted">Numéro saisi, fichier non déposé</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted">Aucune licence déposée</span>
+                  )}
                 </Td>
                 <Td className="min-w-40 whitespace-pre-line text-muted">{request.note ?? ""}</Td>
                 <Td className="whitespace-nowrap">{formatShortDate(request.createdAt)}</Td>

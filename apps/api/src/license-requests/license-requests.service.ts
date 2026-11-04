@@ -57,6 +57,15 @@ const itemSelect = {
       addressLine: true,
       postalCode: true,
       city: true,
+      licenses: {
+        select: {
+          id: true,
+          season: true,
+          discipline: true,
+          number: true,
+          storageKey: true,
+        },
+      },
     },
   },
 } satisfies Prisma.LicenseRequestSelect;
@@ -67,7 +76,9 @@ export type MissingField = 'birthDate' | 'sex' | 'nationality' | 'address';
 
 const blank = (value: string | null) => !value || !value.trim();
 
-export function missingFields(user: ItemRow['user']): MissingField[] {
+export function missingFields(
+  user: Omit<ItemRow['user'], 'licenses'>,
+): MissingField[] {
   const missing: MissingField[] = [];
   if (!user.birthDate) missing.push('birthDate');
   if (!user.sex) missing.push('sex');
@@ -78,9 +89,28 @@ export function missingFields(user: ItemRow['user']): MissingField[] {
   return missing;
 }
 
+/*
+ * The licence row of the request's own season and discipline, if any. A member
+ * can hold several (one per discipline and season): the match is exact.
+ */
+export function licenseOf(request: {
+  season: string;
+  discipline: Discipline;
+  user: { licenses: ItemRow['user']['licenses'] };
+}) {
+  const found = request.user.licenses.find(
+    (l) => l.season === request.season && l.discipline === request.discipline,
+  );
+  return found
+    ? { id: found.id, number: found.number, hasFile: found.storageKey !== null }
+    : null;
+}
+
 function toItem({ user, ...request }: ItemRow) {
+  const license = licenseOf({ user, ...request });
   return {
     ...request,
+    license,
     member: {
       id: user.id,
       firstName: user.firstName,

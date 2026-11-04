@@ -1,4 +1,8 @@
-import { licenseNumberFor, missingFields } from './license-requests.service';
+import {
+  licenseNumberFor,
+  licenseOf,
+  missingFields,
+} from './license-requests.service';
 
 const complete = {
   id: 'u1',
@@ -49,5 +53,58 @@ describe('licenseNumberFor', () => {
 
   it('is null without an earlier licence', () => {
     expect(licenseNumberFor(licenses, '2023-2024')).toBeNull();
+  });
+});
+
+describe('licenseOf', () => {
+  const licenses = [
+    {
+      id: 'l1',
+      season: '2026-2027',
+      discipline: 'KENDO' as const,
+      number: 'N1',
+      storageKey: 'k1',
+    },
+    {
+      id: 'l2',
+      season: '2026-2027',
+      discipline: 'IAIDO' as const,
+      number: 'N1',
+      storageKey: null,
+    },
+    {
+      id: 'l3',
+      season: '2025-2026',
+      discipline: 'IAIDO' as const,
+      number: 'OLD',
+      storageKey: 'k3',
+    },
+  ];
+
+  it('matches the request season and discipline among several licences', () => {
+    expect(
+      licenseOf({
+        season: '2026-2027',
+        discipline: 'IAIDO',
+        user: { licenses },
+      }),
+    ).toEqual({ id: 'l2', number: 'N1', hasFile: false });
+    expect(
+      licenseOf({
+        season: '2026-2027',
+        discipline: 'KENDO',
+        user: { licenses },
+      }),
+    ).toEqual({ id: 'l1', number: 'N1', hasFile: true });
+  });
+
+  it('is null when no licence matches, and never exposes the storage key', () => {
+    expect(
+      licenseOf({
+        season: '2026-2027',
+        discipline: 'JODO',
+        user: { licenses },
+      }),
+    ).toBeNull();
   });
 });
